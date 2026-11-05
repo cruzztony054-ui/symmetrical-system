@@ -102,8 +102,7 @@ let r=await db.auth.signUp({email,password,options:{data:{full_name,username}}})
 if(r.error){say(r.error.message);return;}
 if(!r.data.session){say("Check your email to confirm your account, then log in.");return;}
 try{await enter(r.data.user);}catch(e){say(e.message);}
-}
-async function login(){
+}async function login(){
   try {
     const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value;
