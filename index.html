@@ -103,14 +103,34 @@ if(r.error){say(r.error.message);return;}
 if(!r.data.session){say("Check your email to confirm your account, then log in.");return;}
 try{await enter(r.data.user);}catch(e){say(e.message);}
 }
-
 async function login(){
-let email=document.getElementById("email").value.trim();
-let password=document.getElementById("password").value;
-say("Logging in...");
-let r=await db.auth.signInWithPassword({email,password});
-if(r.error){say(r.error.message);return;}
-try{await enter(r.data.user);}catch(e){say(e.message);}
+  try {
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+
+    if (!email || !password) {
+      say("Enter your email and password.");
+      return;
+    }
+
+    say("Connecting...");
+
+    const result = await Promise.race([
+      db.auth.signInWithPassword({email, password}),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Login timed out. Please try again.")), 15000)
+      )
+    ]);
+
+    if (result.error) throw result.error;
+
+    say("Login successful. Loading profile...");
+
+    await enter(result.data.user);
+
+  } catch (error) {
+    say("Login error: " + (error.message || "Please try again."));
+  }
 }
 
 async function searchUsers(){
