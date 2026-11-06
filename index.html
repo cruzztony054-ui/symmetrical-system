@@ -1,297 +1,176 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#090d16">
 <title>T-WORLD</title>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
 *{box-sizing:border-box}
-body{
-  margin:0;background:#090d16;color:white;
-  font-family:Arial,sans-serif
-}
-header{
-  background:#111a2a;padding:18px;
-  display:flex;justify-content:space-between;
-  align-items:center;border-bottom:1px solid #26344a
-}
-.logo{font-size:25px;font-weight:bold;color:#55c8ff}
-.container{max-width:650px;margin:auto;padding:18px}
-.card{
-  background:#121d2e;padding:20px;
-  border:1px solid #26364d;border-radius:15px;
-  margin-top:20px
-}
-.field{
-  width:100%;padding:14px;margin:8px 0;
-  background:#091321;border:1px solid #33445c;
-  border-radius:9px;color:white;font-size:16px
-}
-button{
-  padding:13px;border:0;border-radius:9px;
-  background:#168ed0;color:white;font-weight:bold;
-  font-size:15px;cursor:pointer
-}
-.primary{width:100%;margin-top:10px}
-.hidden{display:none!important}
-.switch{text-align:center;margin-top:17px;color:#aebbd0}
-.switch span{color:#55c8ff;cursor:pointer}
-.message{margin-top:12px;color:#55c8ff;line-height:1.5}
-.error{color:#ff8585}
-.muted{color:#9eacc1}
-.person{
-  padding:14px;margin:9px 0;
-  background:#19283c;border-radius:10px;cursor:pointer
-}
-.person small{display:block;color:#aebbd0;margin-top:5px}
-#messages{
-  height:50vh;overflow-y:auto;padding:12px 0
-}
-.bubble{
-  max-width:85%;padding:12px;margin:9px 0;
-  border-radius:13px;background:#1c2c41;
-  overflow-wrap:anywhere
-}
-.mine{background:#075d91;margin-left:auto}
-.bubble small{
-  display:block;margin-top:6px;
-  color:#d1dbe8;font-size:10px
-}
-.send-row{display:flex;gap:8px}
-.send-row input{flex:1;min-width:0}
+body{margin:0;background:#101827;color:white;font-family:Arial,sans-serif}
+header{background:#172338;padding:18px;text-align:center;font-size:24px;font-weight:bold;color:#38bdf8}
+.container{max-width:650px;margin:auto;padding:15px}
+.panel{background:#1b2940;padding:17px;border-radius:12px;margin-top:15px}
+input,button{width:100%;padding:13px;margin:7px 0;border:0;border-radius:7px;font-size:15px}
+input{background:#eef2f7;color:#111}
+button{background:#0284c7;color:white;font-weight:bold;cursor:pointer}
+.smallbtn{width:auto;padding:9px 13px;background:#475569}
+.hidden{display:none}
+#message,#appMessage{margin-top:10px;color:#fbbf24}
+.person{background:#263750;padding:13px;border-radius:8px;margin:8px 0;cursor:pointer}
+.person strong{display:block}
+.status{font-size:12px;color:#4ade80;margin-top:5px}
+.offline{color:#94a3b8}
+.unread{color:#38bdf8;font-weight:bold}
+#chatBox{height:350px;overflow-y:auto;background:#101827;border-radius:8px;padding:12px;margin:12px 0}
+.msg{max-width:85%;padding:10px;border-radius:10px;margin:8px 0;overflow-wrap:anywhere}
+.sent{background:#075985;margin-left:auto}
+.received{background:#334155}
+.msgtime{font-size:10px;color:#cbd5e1;margin-top:5px}
+.chatinput{display:flex;gap:7px}
+.chatinput input{flex:1;min-width:0}
+.chatinput button{width:85px}
+#typing{font-size:12px;color:#38bdf8;min-height:18px}
 </style>
 </head>
 
 <body>
+<header>🌍 T-WORLD</header>
 
-<header>
-  <div class="logo">T-WORLD</div>
-  <button id="logoutBtn" class="hidden" onclick="logout()">Log out</button>
-</header>
+<div class="container">
 
-<section id="auth" class="container">
-  <div class="card">
+<div id="authPanel" class="panel">
+<h2>Welcome to T-WORLD</h2>
 
-    <div id="loginForm">
-      <h2>Welcome back</h2>
-      <p class="muted">Log in to your T-WORLD account.</p>
+<h3>Login</h3>
+<input id="loginEmail" type="email" placeholder="Email address">
+<input id="loginPassword" type="password" placeholder="Password">
+<button onclick="login()">Login</button>
 
-      <input id="loginEmail" class="field"
-        type="email" placeholder="Email address">
+<hr>
 
-      <input id="loginPassword" class="field"
-        type="password" placeholder="Password">
+<h3>Create account</h3>
+<input id="fullName" placeholder="Full name">
+<input id="username" placeholder="Username">
+<input id="signupEmail" type="email" placeholder="Email address">
+<input id="signupPassword" type="password" placeholder="Create password">
+<button onclick="register()">Create account</button>
 
-      <button class="primary" onclick="login()">Log In</button>
+<div id="message"></div>
+</div>
 
-      <div class="switch">
-        Don't have an account?
-        <span onclick="showRegister()">Create account</span>
-      </div>
-    </div>
+<div id="appPanel" class="hidden">
 
-    <div id="registerForm" class="hidden">
-      <h2>Create your account</h2>
-      <p class="muted">Join T-WORLD.</p>
+<div class="panel">
+<div id="myName">Welcome</div>
+<button class="smallbtn" onclick="loadUsers()">Refresh people</button>
+<button class="smallbtn" onclick="logout()">Logout</button>
+</div>
 
-      <input id="regName" class="field"
-        placeholder="Full name">
+<div class="panel">
+<h3>People</h3>
+<div id="users">Loading people...</div>
+</div>
 
-      <input id="regUsername" class="field"
-        placeholder="Choose a username">
+<div id="chatPanel" class="panel hidden">
+<div id="chatTitle">Chat</div>
+<div id="typing"></div>
+<div id="chatBox"></div>
+<div class="chatinput">
+<input id="chatInput" placeholder="Write a message..." autocomplete="off">
+<button onclick="sendMessage()">Send</button>
+</div>
+</div>
 
-      <input id="regEmail" class="field"
-        type="email" placeholder="Email address">
-
-      <input id="regPassword" class="field"
-        type="password" placeholder="Password (minimum 8 characters)">
-
-      <button class="primary" onclick="register()">Create Account</button>
-
-      <div class="switch">
-        Already registered?
-        <span onclick="showLogin()">Log in</span>
-      </div>
-    </div>
-
-    <div id="authMessage" class="message"></div>
-  </div>
-</section>
-
-<section id="app" class="container hidden">
-
-  <div id="homeScreen">
-    <div class="card">
-      <h2 id="welcomeText">Welcome to T-WORLD</h2>
-      <p class="muted">Find people and start conversations.</p>
-
-      <input id="searchInput" class="field"
-        placeholder="Search by username..."
-        oninput="searchUsers()">
-
-      <div id="searchResults"></div>
-    </div>
-
-    <div class="card">
-      <h2>Your conversations</h2>
-      <div id="conversationList" class="muted">
-        No conversations yet.
-      </div>
-      <button class="primary" onclick="refreshHome()">
-        Refresh conversations
-      </button>
-    </div>
-  </div>
-
-  <div id="chatScreen" class="hidden">
-    <div class="card">
-      <button onclick="goHome()">← Back</button>
-      <h2 id="chatName">Chat</h2>
-
-      <div id="messages"></div>
-
-      <div class="send-row">
-        <input id="messageInput" class="field"
-          placeholder="Write a message..."
-          onkeydown="if(event.key==='Enter')sendMessage()">
-        <button onclick="sendMessage()">Send</button>
-      </div>
-
-      <div id="chatMessage" class="message"></div>
-    </div>
-  </div>
-
-</section>
+<div id="appMessage"></div>
+</div>
+</div>
 
 <script>
-/* =================================
-   SUPABASE CONNECTION
-================================= */
+/* SUPABASE CONNECTION */
 
-const SUPABASE_URL =
-"https://szlsitwlvlcohcodhazu.supabase.co";
+const SUPABASE_URL = "https://szlsitwlvlcohcodhazu.supabase.co";
+const SUPABASE_KEY = "sb_publishable_4t9X38e8lhJuwTB3KpaEfg_jfYwLcPS";
 
-const SUPABASE_KEY =
-"sb_publishable_4t9X38e8lhJuwTB3KpaEfg_jfYwLcPS";
+const db = window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
-/* Create the connection ONCE, before any functions use it. */
-const db = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
-);
+/* APP VARIABLES */
 
 let currentUser = null;
 let myProfile = null;
-let activeChatUser = null;
-let messageSubscription = null;
-let searchTimer = null;
-
-/* =================================
-   HELPERS
-================================= */
+let selectedUser = null;
+let messageChannel = null;
+let presenceChannel = null;
+let typingChannel = null;
+let typingTimer = null;
+let heartbeatTimer = null;
+let onlineUsers = new Set();
+let typingTimeout = null;
 
 function el(id){
   return document.getElementById(id);
 }
 
 function showMessage(message,error=false){
-  el("authMessage").textContent=message;
-  el("authMessage").className=
-    error ? "message error" : "message";
+  el("message").textContent = message;
+  el("message").style.color = error ? "#f87171" : "#4ade80";
 }
 
-function showChatMessage(message,error=false){
-  el("chatMessage").textContent=message;
-  el("chatMessage").className=
-    error ? "message error" : "message";
+function appMessage(message){
+  el("appMessage").textContent = message;
 }
 
-function showLogin(){
-  el("registerForm").classList.add("hidden");
-  el("loginForm").classList.remove("hidden");
-  showMessage("");
-}
-
-function showRegister(){
-  el("loginForm").classList.add("hidden");
-  el("registerForm").classList.remove("hidden");
-  showMessage("");
-}
-
-/* =================================
-   INITIALIZE
-================================= */
-
-async function initialize(){
-  try{
-    showMessage("Connecting to T-WORLD...");
-
-    const {data,error}=await db.auth.getSession();
-
-    if(error)throw error;
-
-    if(data.session){
-      await enterApp(data.session.user);
-    }else{
-      showMessage("");
-    }
-
-  }catch(error){
-    showMessage("Connection error: "+error.message,true);
-  }
-}
-
-/* =================================
-   REGISTER
-================================= */
+/* REGISTER */
 
 async function register(){
   try{
-    const name=el("regName").value.trim();
-    const username=el("regUsername").value.trim().toLowerCase();
-    const email=el("regEmail").value.trim();
-    const password=el("regPassword").value;
+    const fullName = el("fullName").value.trim();
+    const username = el("username").value.trim().toLowerCase();
+    const email = el("signupEmail").value.trim();
+    const password = el("signupPassword").value;
 
-    if(!name||!username||!email||!password){
-      return showMessage("Please fill in all fields.",true);
+    if(!fullName || !username || !email || !password){
+      return showMessage("Please complete all fields.",true);
     }
 
-    if(!/^[a-z0-9_]{3,20}$/.test(username)){
-      return showMessage(
-        "Username must be 3-20 letters, numbers or underscores.",
-        true
-      );
-    }
-
-    if(password.length<8){
-      return showMessage("Password must be at least 8 characters.",true);
+    if(password.length < 6){
+      return showMessage("Password must contain at least 6 characters.",true);
     }
 
     showMessage("Creating your account...");
 
-    const {data,error}=await db.auth.signUp({
-      email:email,
-      password:password,
+    const {data,error} = await db.auth.signUp({
+      email,
+      password,
       options:{
         data:{
-          full_name:name,
+          full_name:fullName,
           username:username
         }
       }
     });
 
-    if(error)throw error;
+    if(error) throw error;
 
-    if(data.session){
-      await enterApp(data.user);
+    if(data.user && data.session){
+      currentUser = data.user;
+
+      const {error:profileError} = await db
+        .from("profiles")
+        .upsert({
+          id:currentUser.id,
+          full_name:fullName,
+          username:username,
+          last_seen:new Date().toISOString()
+        });
+
+      if(profileError) throw profileError;
+
+      await startApp();
     }else{
-      showMessage(
-        "Account created! Check your email to confirm, then log in."
-      );
+      showMessage("Account created! Check your email to confirm your account, then log in.");
     }
 
   }catch(error){
@@ -299,418 +178,464 @@ async function register(){
   }
 }
 
-/* =================================
-   LOGIN
-================================= */
+/* LOGIN */
 
 async function login(){
   try{
-    const email=el("loginEmail").value.trim();
-    const password=el("loginPassword").value;
+    const email = el("loginEmail").value.trim();
+    const password = el("loginPassword").value;
 
-    if(!email||!password){
+    if(!email || !password){
       return showMessage("Enter your email and password.",true);
     }
 
     showMessage("Logging in...");
 
-    const {data,error}=await db.auth.signInWithPassword({
-      email:email,
-      password:password
+    const {data,error} = await db.auth.signInWithPassword({
+      email,
+      password
     });
 
-    if(error)throw error;
+    if(error) throw error;
 
-    await enterApp(data.user);
+    currentUser = data.user;
+    await startApp();
 
   }catch(error){
-    showMessage("Login error: "+error.message,true);
+    showMessage(error.message,true);
   }
 }
 
-/* =================================
-   PROFILE
-================================= */
+/* START APP */
 
-async function ensureProfile(user){
-  const {data,error}=await db
+async function startApp(){
+  el("authPanel").classList.add("hidden");
+  el("appPanel").classList.remove("hidden");
+
+  const {data,error} = await db
     .from("profiles")
     .select("*")
-    .eq("id",user.id)
+    .eq("id",currentUser.id)
     .maybeSingle();
 
-  if(error)throw error;
+  if(error) throw error;
 
-  if(data){
-    myProfile=data;
+  if(!data){
+    const name = currentUser.user_metadata.full_name || "User";
+    const username = currentUser.user_metadata.username || currentUser.email.split("@")[0];
+
+    const {data:newProfile,error:insertError} = await db
+      .from("profiles")
+      .insert({
+        id:currentUser.id,
+        full_name:name,
+        username:username,
+        last_seen:new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if(insertError) throw insertError;
+    myProfile = newProfile;
+  }else{
+    myProfile = data;
+  }
+
+  el("myName").textContent =
+    "Welcome, " + (myProfile.full_name || myProfile.username);
+
+  await loadUsers();
+  startPresence();
+  startMessageUpdates();
+  startHeartbeat();
+}
+
+/* LOAD PEOPLE */
+
+async function loadUsers(){
+  if(!currentUser) return;
+
+  el("users").textContent = "Loading people...";
+
+  const {data:profiles,error} = await db
+    .from("profiles")
+    .select("id,full_name,username,last_seen")
+    .neq("id",currentUser.id)
+    .order("username");
+
+  if(error){
+    el("users").textContent = error.message;
     return;
   }
 
-  const name=user.user_metadata.full_name||"T-WORLD User";
-  const username=
-    user.user_metadata.username||
-    "user_"+user.id.substring(0,8);
+  const {data:unread,error:unreadError} = await db
+    .from("messages")
+    .select("sender_id")
+    .eq("receiver_id",currentUser.id)
+    .is("read_at",null);
 
-  const {data:newProfile,error:insertError}=await db
-    .from("profiles")
-    .insert({
-      id:user.id,
-      full_name:name,
-      username:username
-    })
-    .select()
-    .single();
+  const counts = {};
 
-  if(insertError)throw insertError;
-
-  myProfile=newProfile;
-}
-
-/* =================================
-   ENTER APP
-================================= */
-
-async function enterApp(user){
-  try{
-    currentUser=user;
-
-    await ensureProfile(user);
-
-    el("auth").classList.add("hidden");
-    el("app").classList.remove("hidden");
-    el("logoutBtn").classList.remove("hidden");
-
-    el("welcomeText").textContent=
-      "Welcome, "+myProfile.full_name;
-
-    await refreshHome();
-
-  }catch(error){
-    showMessage("Profile error: "+error.message,true);
-    el("auth").classList.remove("hidden");
-    el("app").classList.add("hidden");
-  }
-}
-
-/* =================================
-   SEARCH USERS
-================================= */
-
-async function searchUsers(){
-  clearTimeout(searchTimer);
-
-  searchTimer=setTimeout(async()=>{
-    try{
-      const term=el("searchInput").value.trim().toLowerCase();
-      const results=el("searchResults");
-
-      results.innerHTML="";
-
-      if(term.length<2)return;
-
-      const {data,error}=await db
-        .from("profiles")
-        .select("id,full_name,username")
-        .ilike("username","%"+term+"%")
-        .neq("id",currentUser.id)
-        .limit(20);
-
-      if(error)throw error;
-
-      if(!data.length){
-        results.textContent="No users found.";
-        return;
-      }
-
-      data.forEach(person=>{
-        const item=document.createElement("div");
-        item.className="person";
-
-        const name=document.createElement("strong");
-        name.textContent=person.full_name;
-
-        const username=document.createElement("small");
-        username.textContent="@"+person.username;
-
-        item.append(name,username);
-        item.onclick=()=>openChat(person);
-
-        results.appendChild(item);
-      });
-
-    }catch(error){
-      el("searchResults").textContent=error.message;
-    }
-  },350);
-}
-
-/* =================================
-   CONVERSATIONS
-================================= */
-
-async function refreshHome(){
-  try{
-    if(!currentUser)return;
-
-    const list=el("conversationList");
-    list.textContent="Loading conversations...";
-
-    const {data,error}=await db
-      .from("messages")
-      .select("sender_id,receiver_id,created_at")
-      .or(
-        "sender_id.eq."+currentUser.id+
-        ",receiver_id.eq."+currentUser.id
-      )
-      .order("created_at",{ascending:false})
-      .limit(100);
-
-    if(error)throw error;
-
-    const otherIds=[...new Set(
-      data.map(message=>
-        message.sender_id===currentUser.id
-          ? message.receiver_id
-          : message.sender_id
-      )
-    )];
-
-    list.innerHTML="";
-
-    if(!otherIds.length){
-      list.textContent="No conversations yet. Search for someone to chat with.";
-      return;
-    }
-
-    const {data:people,error:peopleError}=await db
-      .from("profiles")
-      .select("id,full_name,username")
-      .in("id",otherIds);
-
-    if(peopleError)throw peopleError;
-
-    people.forEach(person=>{
-      const item=document.createElement("div");
-      item.className="person";
-
-      const name=document.createElement("strong");
-      name.textContent=person.full_name;
-
-      const username=document.createElement("small");
-      username.textContent="@"+person.username;
-
-      item.append(name,username);
-      item.onclick=()=>openChat(person);
-
-      list.appendChild(item);
+  if(!unreadError){
+    unread.forEach(message=>{
+      counts[message.sender_id] =
+        (counts[message.sender_id] || 0) + 1;
     });
-
-  }catch(error){
-    el("conversationList").textContent=error.message;
   }
+
+  el("users").innerHTML = "";
+
+  if(!profiles.length){
+    el("users").textContent = "No other users yet.";
+    return;
+  }
+
+  profiles.forEach(person=>{
+    const div = document.createElement("div");
+    div.className = "person";
+
+    const name = document.createElement("strong");
+    name.textContent = person.full_name || person.username || "User";
+
+    const username = document.createElement("div");
+    username.textContent = "@" + (person.username || "user");
+
+    const status = document.createElement("div");
+    const online = onlineUsers.has(person.id);
+
+    status.className = online ? "status" : "status offline";
+
+    if(online){
+      status.textContent = "● Online";
+    }else{
+      status.textContent = "● Offline";
+      if(person.last_seen){
+        status.textContent += " · Last seen " +
+          new Date(person.last_seen).toLocaleString();
+      }
+    }
+
+    div.appendChild(name);
+    div.appendChild(username);
+    div.appendChild(status);
+
+    if(counts[person.id]){
+      const unreadLabel = document.createElement("div");
+      unreadLabel.className = "unread";
+      unreadLabel.textContent = counts[person.id] + " unread message(s)";
+      div.appendChild(unreadLabel);
+    }
+
+    div.onclick = ()=>openChat(person);
+    el("users").appendChild(div);
+  });
 }
 
-/* =================================
-   OPEN CHAT
-================================= */
+/* OPEN CHAT */
 
 async function openChat(person){
-  try{
-    activeChatUser=person;
+  selectedUser = person;
 
-    closeRealtime();
+  el("chatPanel").classList.remove("hidden");
+  el("chatTitle").textContent =
+    person.full_name || person.username || "Chat";
 
-    el("homeScreen").classList.add("hidden");
-    el("chatScreen").classList.remove("hidden");
+  el("chatBox").textContent = "Loading messages...";
 
-    el("chatName").textContent=
-      person.full_name+" (@"+person.username+")";
+  await loadMessages();
+  await markMessagesRead();
+  startTypingChannel();
 
-    showChatMessage("Loading messages...");
-
-    await loadMessages();
-    subscribeToMessages();
-
-  }catch(error){
-    showChatMessage(error.message,true);
-  }
+  el("chatPanel").scrollIntoView({behavior:"smooth"});
 }
 
-/* =================================
-   LOAD MESSAGES
-================================= */
+/* LOAD MESSAGES */
 
 async function loadMessages(){
-  if(!activeChatUser)return;
+  if(!selectedUser || !currentUser) return;
 
-  const otherId=activeChatUser.id;
-
-  const {data,error}=await db
+  const {data,error} = await db
     .from("messages")
     .select("*")
     .or(
       "and(sender_id.eq."+currentUser.id+
-      ",receiver_id.eq."+otherId+"),"+
-      "and(sender_id.eq."+otherId+
+      ",receiver_id.eq."+selectedUser.id+
+      "),and(sender_id.eq."+selectedUser.id+
       ",receiver_id.eq."+currentUser.id+")"
     )
     .order("created_at",{ascending:true});
 
-  if(error)throw error;
+  if(error){
+    el("chatBox").textContent = error.message;
+    return;
+  }
 
-  const box=el("messages");
-  box.innerHTML="";
+  el("chatBox").innerHTML = "";
 
   data.forEach(message=>{
-    const bubble=document.createElement("div");
+    const div = document.createElement("div");
+    div.className = "msg " +
+      (message.sender_id === currentUser.id ? "sent" : "received");
 
-    bubble.className=
-      message.sender_id===currentUser.id
-        ?"bubble mine"
-        :"bubble";
+    const content = document.createElement("div");
+    content.textContent = message.content;
 
-    const content=document.createElement("div");
-    content.textContent=message.content;
+    const time = document.createElement("div");
+    time.className = "msgtime";
+    time.textContent = new Date(message.created_at).toLocaleString();
 
-    const time=document.createElement("small");
-    time.textContent=new Date(
-      message.created_at
-    ).toLocaleString();
+    if(message.sender_id === currentUser.id && message.read_at){
+      time.textContent += " · Seen";
+    }
 
-    bubble.append(content,time);
-    box.appendChild(bubble);
+    div.appendChild(content);
+    div.appendChild(time);
+    el("chatBox").appendChild(div);
   });
 
-  box.scrollTop=box.scrollHeight;
-  showChatMessage("");
+  el("chatBox").scrollTop = el("chatBox").scrollHeight;
 }
 
-/* =================================
-   SEND MESSAGE
-================================= */
+/* SEND MESSAGE */
 
 async function sendMessage(){
   try{
-    const content=el("messageInput").value.trim();
+    if(!selectedUser) return;
 
-    if(!content||!activeChatUser)return;
+    const content = el("chatInput").value.trim();
+    if(!content) return;
 
-    if(content.length>4000){
-      return showChatMessage("Message is too long.",true);
-    }
+    el("chatInput").value = "";
 
-    el("messageInput").value="";
-    showChatMessage("Sending...");
+    const {error} = await db
+      .from("messages")
+      .insert({
+        sender_id:currentUser.id,
+        receiver_id:selectedUser.id,
+        content:content
+      });
 
-    const {error}=await db.from("messages").insert({
-      sender_id:currentUser.id,
-      receiver_id:activeChatUser.id,
-      content:content
-    });
+    if(error) throw error;
 
-    if(error)throw error;
-
-    showChatMessage("");
     await loadMessages();
 
   }catch(error){
-    showChatMessage(error.message,true);
+    appMessage(error.message);
   }
 }
 
-/* =================================
-   REAL-TIME MESSAGES
-================================= */
+/* ENTER TO SEND */
 
-function subscribeToMessages(){
-  if(messageSubscription){
-    db.removeChannel(messageSubscription);
+el("chatInput").addEventListener("keydown",function(event){
+  if(event.key === "Enter"){
+    sendMessage();
+  }
+});
+
+/* MARK MESSAGES AS READ */
+
+async function markMessagesRead(){
+  if(!selectedUser || !currentUser) return;
+
+  const {error} = await db
+    .from("messages")
+    .update({read_at:new Date().toISOString()})
+    .eq("sender_id",selectedUser.id)
+    .eq("receiver_id",currentUser.id)
+    .is("read_at",null);
+
+  if(error){
+    appMessage("Read status: " + error.message);
   }
 
-  messageSubscription=db
-    .channel("t-world-"+currentUser.id+"-"+activeChatUser.id)
+  await loadUsers();
+}
+
+/* REALTIME MESSAGE UPDATES */
+
+function startMessageUpdates(){
+  if(messageChannel){
+    db.removeChannel(messageChannel);
+  }
+
+  messageChannel = db
+    .channel("t-world-messages-"+currentUser.id)
     .on(
       "postgres_changes",
       {
-        event:"INSERT",
+        event:"*",
         schema:"public",
         table:"messages"
       },
-      payload=>{
-        const message=payload.new;
+      async payload=>{
+        const msg = payload.new || payload.old;
+
+        if(!msg) return;
+
+        const involved =
+          msg.sender_id === currentUser.id ||
+          msg.receiver_id === currentUser.id;
+
+        if(!involved) return;
+
+        await loadUsers();
 
         if(
-          activeChatUser&&
+          selectedUser &&
           (
-            (message.sender_id===currentUser.id&&
-             message.receiver_id===activeChatUser.id)||
-            (message.sender_id===activeChatUser.id&&
-             message.receiver_id===currentUser.id)
+            msg.sender_id === selectedUser.id ||
+            msg.receiver_id === selectedUser.id
           )
         ){
-          loadMessages().catch(error=>{
-            showChatMessage(error.message,true);
-          });
+          await loadMessages();
+
+          if(msg.sender_id === selectedUser.id){
+            await markMessagesRead();
+          }
         }
       }
     )
     .subscribe();
 }
 
-function closeRealtime(){
-  if(messageSubscription){
-    db.removeChannel(messageSubscription);
-    messageSubscription=null;
+/* ONLINE PRESENCE */
+
+function startPresence(){
+  if(presenceChannel){
+    db.removeChannel(presenceChannel);
   }
+
+  presenceChannel = db.channel("t-world-online");
+
+  presenceChannel
+    .on("presence",{event:"sync"},()=>{
+      onlineUsers = new Set();
+
+      const state = presenceChannel.presenceState();
+
+      Object.keys(state).forEach(key=>{
+        state[key].forEach(user=>{
+          if(user.user_id){
+            onlineUsers.add(user.user_id);
+          }
+        });
+      });
+
+      loadUsers();
+    })
+    .subscribe(async status=>{
+      if(status === "SUBSCRIBED"){
+        await presenceChannel.track({
+          user_id:currentUser.id,
+          online_at:new Date().toISOString()
+        });
+      }
+    });
 }
 
-/* =================================
-   NAVIGATION
-================================= */
+/* LAST SEEN HEARTBEAT */
 
-function goHome(){
-  closeRealtime();
+function startHeartbeat(){
+  if(heartbeatTimer) clearInterval(heartbeatTimer);
 
-  activeChatUser=null;
+  const updateLastSeen = async()=>{
+    if(!currentUser) return;
 
-  el("chatScreen").classList.add("hidden");
-  el("homeScreen").classList.remove("hidden");
+    await db
+      .from("profiles")
+      .update({last_seen:new Date().toISOString()})
+      .eq("id",currentUser.id);
+  };
 
-  refreshHome();
+  updateLastSeen();
+
+  heartbeatTimer = setInterval(updateLastSeen,60000);
 }
 
-/* =================================
-   LOGOUT
-================================= */
+/* TYPING INDICATOR */
+
+function startTypingChannel(){
+  if(typingChannel){
+    db.removeChannel(typingChannel);
+  }
+
+  const ids = [currentUser.id,selectedUser.id].sort();
+  const channelName = "typing-"+ids.join("-");
+
+  typingChannel = db.channel(channelName);
+
+  typingChannel
+    .on("broadcast",{event:"typing"},payload=>{
+      if(payload.payload.user_id !== currentUser.id){
+        el("typing").textContent =
+          (selectedUser.full_name || selectedUser.username) +
+          " is typing...";
+        clearTimeout(typingTimeout);
+
+        typingTimeout = setTimeout(()=>{
+          el("typing").textContent = "";
+        },2500);
+      }
+    })
+    .subscribe();
+}
+
+el("chatInput").addEventListener("input",async()=>{
+  if(!typingChannel || !currentUser) return;
+
+  await typingChannel.send({
+    type:"broadcast",
+    event:"typing",
+    payload:{user_id:currentUser.id}
+  });
+});
+
+/* LOGOUT */
 
 async function logout(){
-  try{
-    closeRealtime();
+  if(heartbeatTimer) clearInterval(heartbeatTimer);
+  if(typingTimeout) clearTimeout(typingTimeout);
 
-    const {error}=await db.auth.signOut();
+  if(messageChannel) await db.removeChannel(messageChannel);
+  if(presenceChannel) await db.removeChannel(presenceChannel);
+  if(typingChannel) await db.removeChannel(typingChannel);
 
-    if(error)throw error;
+  await db.auth.signOut();
 
-    currentUser=null;
-    myProfile=null;
-    activeChatUser=null;
+  currentUser = null;
+  myProfile = null;
+  selectedUser = null;
+  onlineUsers.clear();
 
-    el("app").classList.add("hidden");
-    el("auth").classList.remove("hidden");
-    el("logoutBtn").classList.add("hidden");
+  el("appPanel").classList.add("hidden");
+  el("authPanel").classList.remove("hidden");
+  el("chatPanel").classList.add("hidden");
 
-    showLogin();
+  showMessage("You have logged out.");
+}
 
-  }catch(error){
+/* RESTORE SESSION */
+
+async function restoreSession(){
+  const {data,error} = await db.auth.getSession();
+
+  if(error){
     showMessage(error.message,true);
+    return;
+  }
+
+  if(data.session){
+    currentUser = data.session.user;
+
+    try{
+      await startApp();
+    }catch(error){
+      appMessage(error.message);
+    }
   }
 }
 
-/* =================================
-   START T-WORLD
-================================= */
-
-initialize();
+restoreSession();
 
 </script>
 </body>
