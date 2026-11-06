@@ -3,208 +3,715 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#090d16">
 <title>T-WORLD</title>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <style>
-body{background:#101827;color:white;font-family:Arial;padding:20px}
-main{max-width:500px;margin:auto}
-h1{text-align:center;color:#36d6a5}
-.card{background:#1d293b;padding:18px;border-radius:12px;margin:15px 0}
-input,button{box-sizing:border-box;width:100%;padding:13px;margin:7px 0;border:0;border-radius:7px;font-size:16px}
-input{background:white;color:#111}
-button{background:#36d6a5;color:#102018;font-weight:bold}
-.secondary{background:#34445c;color:white}
-#app{display:none}
-#chatbox{height:280px;overflow-y:auto;background:#101827;padding:10px;border-radius:8px}
-.message{background:#34445c;padding:10px;margin:7px 0;border-radius:8px;overflow-wrap:anywhere}
-.mine{background:#087d62;text-align:right}
+*{box-sizing:border-box}
+body{
+  margin:0;background:#090d16;color:white;
+  font-family:Arial,sans-serif
+}
+header{
+  background:#111a2a;padding:18px;
+  display:flex;justify-content:space-between;
+  align-items:center;border-bottom:1px solid #26344a
+}
+.logo{font-size:25px;font-weight:bold;color:#55c8ff}
+.container{max-width:650px;margin:auto;padding:18px}
+.card{
+  background:#121d2e;padding:20px;
+  border:1px solid #26364d;border-radius:15px;
+  margin-top:20px
+}
+.field{
+  width:100%;padding:14px;margin:8px 0;
+  background:#091321;border:1px solid #33445c;
+  border-radius:9px;color:white;font-size:16px
+}
+button{
+  padding:13px;border:0;border-radius:9px;
+  background:#168ed0;color:white;font-weight:bold;
+  font-size:15px;cursor:pointer
+}
+.primary{width:100%;margin-top:10px}
+.hidden{display:none!important}
+.switch{text-align:center;margin-top:17px;color:#aebbd0}
+.switch span{color:#55c8ff;cursor:pointer}
+.message{margin-top:12px;color:#55c8ff;line-height:1.5}
+.error{color:#ff8585}
+.muted{color:#9eacc1}
+.person{
+  padding:14px;margin:9px 0;
+  background:#19283c;border-radius:10px;cursor:pointer
+}
+.person small{display:block;color:#aebbd0;margin-top:5px}
+#messages{
+  height:50vh;overflow-y:auto;padding:12px 0
+}
+.bubble{
+  max-width:85%;padding:12px;margin:9px 0;
+  border-radius:13px;background:#1c2c41;
+  overflow-wrap:anywhere
+}
+.mine{background:#075d91;margin-left:auto}
+.bubble small{
+  display:block;margin-top:6px;
+  color:#d1dbe8;font-size:10px
+}
+.send-row{display:flex;gap:8px}
+.send-row input{flex:1;min-width:0}
 </style>
 </head>
+
 <body>
-<main>
-<h1>T-WORLD</h1>
-<p style="text-align:center">Connect. Chat. Stay private.</p>
 
-<section id="auth" class="card">
-<h3>Login</h3>
-<input id="email" type="email" placeholder="Email address">
-<input id="password" type="password" placeholder="Password">
-<button onclick="login()">Login</button>
-<hr>
-<h3>Create account</h3>
-<input id="fullname" placeholder="Full name">
-<input id="username" placeholder="Username">
-<input id="newemail" type="email" placeholder="Email address">
-<input id="newpassword" type="password" placeholder="Create password">
-<button onclick="register()">Create account</button>
-<p id="status"></p>
+<header>
+  <div class="logo">T-WORLD</div>
+  <button id="logoutBtn" class="hidden" onclick="logout()">Log out</button>
+</header>
+
+<section id="auth" class="container">
+  <div class="card">
+
+    <div id="loginForm">
+      <h2>Welcome back</h2>
+      <p class="muted">Log in to your T-WORLD account.</p>
+
+      <input id="loginEmail" class="field"
+        type="email" placeholder="Email address">
+
+      <input id="loginPassword" class="field"
+        type="password" placeholder="Password">
+
+      <button class="primary" onclick="login()">Log In</button>
+
+      <div class="switch">
+        Don't have an account?
+        <span onclick="showRegister()">Create account</span>
+      </div>
+    </div>
+
+    <div id="registerForm" class="hidden">
+      <h2>Create your account</h2>
+      <p class="muted">Join T-WORLD.</p>
+
+      <input id="regName" class="field"
+        placeholder="Full name">
+
+      <input id="regUsername" class="field"
+        placeholder="Choose a username">
+
+      <input id="regEmail" class="field"
+        type="email" placeholder="Email address">
+
+      <input id="regPassword" class="field"
+        type="password" placeholder="Password (minimum 8 characters)">
+
+      <button class="primary" onclick="register()">Create Account</button>
+
+      <div class="switch">
+        Already registered?
+        <span onclick="showLogin()">Log in</span>
+      </div>
+    </div>
+
+    <div id="authMessage" class="message"></div>
+  </div>
 </section>
 
-<section id="app">
-<div class="card">
-<h3 id="welcome">Welcome</h3>
-<button class="secondary" onclick="logout()">Log out</button>
-</div>
-<div class="card">
-<h3>Find people</h3>
-<input id="search" placeholder="Search username">
-<button onclick="searchUsers()">Search</button>
-<div id="results"></div>
-</div>
-<div class="card">
-<h3 id="chatTitle">Private messages</h3>
-<div id="chatbox">Choose someone to chat with.</div>
-<input id="message" placeholder="Write a message">
-<button onclick="sendMessage()">Send message</button>
-<p id="chatStatus"></p>
-</div>
+<section id="app" class="container hidden">
+
+  <div id="homeScreen">
+    <div class="card">
+      <h2 id="welcomeText">Welcome to T-WORLD</h2>
+      <p class="muted">Find people and start conversations.</p>
+
+      <input id="searchInput" class="field"
+        placeholder="Search by username..."
+        oninput="searchUsers()">
+
+      <div id="searchResults"></div>
+    </div>
+
+    <div class="card">
+      <h2>Your conversations</h2>
+      <div id="conversationList" class="muted">
+        No conversations yet.
+      </div>
+      <button class="primary" onclick="refreshHome()">
+        Refresh conversations
+      </button>
+    </div>
+  </div>
+
+  <div id="chatScreen" class="hidden">
+    <div class="card">
+      <button onclick="goHome()">← Back</button>
+      <h2 id="chatName">Chat</h2>
+
+      <div id="messages"></div>
+
+      <div class="send-row">
+        <input id="messageInput" class="field"
+          placeholder="Write a message..."
+          onkeydown="if(event.key==='Enter')sendMessage()">
+        <button onclick="sendMessage()">Send</button>
+      </div>
+
+      <div id="chatMessage" class="message"></div>
+    </div>
+  </div>
+
 </section>
-</main>
 
 <script>
-const URL="https://szlsitwlvlcohcodhazu.supabase.co";
-const KEY="sb_publishable_4t9X38e8lhJuwTB3KpaEfg_jfYwLcPS";
-const db=window.supabase.createClient(URL,KEY);
+/* =================================
+   SUPABASE CONNECTION
+================================= */
 
-let me=null, profile=null, friend=null;
+const SUPABASE_URL =
+"https://szlsitwlvlcohcodhazu.supabase.co";
 
-function say(t){document.getElementById("status").textContent=t;}
+const SUPABASE_KEY =
+"sb_publishable_4t9X38e8lhJuwTB3KpaEfg_jfYwLcPS";
 
-async function enter(user){
-me=user;
-let r=await db.from("profiles").select("*").eq("id",user.id).maybeSingle();
-if(r.error)throw r.error;
-profile=r.data;
-if(!profile){
-let p=await db.from("profiles").insert({
-id:user.id,
-full_name:user.user_metadata.full_name||"",
-username:user.user_metadata.username||""
-}).select().single();
-if(p.error)throw p.error;
-profile=p.data;
+/* Create the connection ONCE, before any functions use it. */
+const db = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+
+let currentUser = null;
+let myProfile = null;
+let activeChatUser = null;
+let messageSubscription = null;
+let searchTimer = null;
+
+/* =================================
+   HELPERS
+================================= */
+
+function el(id){
+  return document.getElementById(id);
 }
-document.getElementById("auth").style.display="none";
-document.getElementById("app").style.display="block";
-document.getElementById("welcome").textContent="Welcome @"+profile.username;
-say("");
+
+function showMessage(message,error=false){
+  el("authMessage").textContent=message;
+  el("authMessage").className=
+    error ? "message error" : "message";
 }
 
-async function register(){
-let full_name=document.getElementById("fullname").value.trim();
-let username=document.getElementById("username").value.trim().toLowerCase();
-let email=document.getElementById("newemail").value.trim();
-let password=document.getElementById("newpassword").value;
-if(!full_name||!username||!email||!password){say("Fill in all fields.");return;}
-if(password.length<6){say("Password must be at least 6 characters.");return;}
-say("Creating account...");
-let r=await db.auth.signUp({email,password,options:{data:{full_name,username}}});
-if(r.error){say(r.error.message);return;}
-if(!r.data.session){say("Check your email to confirm your account, then log in.");return;}
-try{await enter(r.data.user);}catch(e){say(e.message);}
-}async function login(){
-  try {
-    const email = document.getElementById("email").value.trim();
-    const password = document.getElementById("password").value;
+function showChatMessage(message,error=false){
+  el("chatMessage").textContent=message;
+  el("chatMessage").className=
+    error ? "message error" : "message";
+}
 
-    if (!email || !password) {
-      say("Enter your email and password.");
-      return;
+function showLogin(){
+  el("registerForm").classList.add("hidden");
+  el("loginForm").classList.remove("hidden");
+  showMessage("");
+}
+
+function showRegister(){
+  el("loginForm").classList.add("hidden");
+  el("registerForm").classList.remove("hidden");
+  showMessage("");
+}
+
+/* =================================
+   INITIALIZE
+================================= */
+
+async function initialize(){
+  try{
+    showMessage("Connecting to T-WORLD...");
+
+    const {data,error}=await db.auth.getSession();
+
+    if(error)throw error;
+
+    if(data.session){
+      await enterApp(data.session.user);
+    }else{
+      showMessage("");
     }
 
-    say("Connecting...");
-
-    const result = await Promise.race([
-      db.auth.signInWithPassword({email, password}),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("Login timed out. Please try again.")), 15000)
-      )
-    ]);
-
-    if (result.error) throw result.error;
-
-    say("Login successful. Loading profile...");
-
-    await enter(result.data.user);
-
-  } catch (error) {
-    say("Login error: " + (error.message || "Please try again."));
+  }catch(error){
+    showMessage("Connection error: "+error.message,true);
   }
 }
 
-async function searchUsers(){
-let term=document.getElementById("search").value.trim().toLowerCase();
-let box=document.getElementById("results");
-if(!term){box.textContent="Enter a username.";return;}
-box.textContent="Searching...";
-let r=await db.from("profiles").select("id,username,full_name").ilike("username","%"+term+"%").neq("id",me.id).limit(20);
-if(r.error){box.textContent=r.error.message;return;}
-box.innerHTML="";
-if(!r.data.length){box.textContent="No users found.";return;}
-r.data.forEach(p=>{
-let b=document.createElement("button");
-b.className="secondary";
-b.textContent=(p.full_name||p.username)+" (@"+p.username+")";
-b.onclick=()=>openChat(p);
-box.appendChild(b);
-});
+/* =================================
+   REGISTER
+================================= */
+
+async function register(){
+  try{
+    const name=el("regName").value.trim();
+    const username=el("regUsername").value.trim().toLowerCase();
+    const email=el("regEmail").value.trim();
+    const password=el("regPassword").value;
+
+    if(!name||!username||!email||!password){
+      return showMessage("Please fill in all fields.",true);
+    }
+
+    if(!/^[a-z0-9_]{3,20}$/.test(username)){
+      return showMessage(
+        "Username must be 3-20 letters, numbers or underscores.",
+        true
+      );
+    }
+
+    if(password.length<8){
+      return showMessage("Password must be at least 8 characters.",true);
+    }
+
+    showMessage("Creating your account...");
+
+    const {data,error}=await db.auth.signUp({
+      email:email,
+      password:password,
+      options:{
+        data:{
+          full_name:name,
+          username:username
+        }
+      }
+    });
+
+    if(error)throw error;
+
+    if(data.session){
+      await enterApp(data.user);
+    }else{
+      showMessage(
+        "Account created! Check your email to confirm, then log in."
+      );
+    }
+
+  }catch(error){
+    showMessage(error.message,true);
+  }
 }
 
-async function openChat(p){
-friend=p;
-document.getElementById("chatTitle").textContent="Chat with @"+p.username;
-await loadMessages();
+/* =================================
+   LOGIN
+================================= */
+
+async function login(){
+  try{
+    const email=el("loginEmail").value.trim();
+    const password=el("loginPassword").value;
+
+    if(!email||!password){
+      return showMessage("Enter your email and password.",true);
+    }
+
+    showMessage("Logging in...");
+
+    const {data,error}=await db.auth.signInWithPassword({
+      email:email,
+      password:password
+    });
+
+    if(error)throw error;
+
+    await enterApp(data.user);
+
+  }catch(error){
+    showMessage("Login error: "+error.message,true);
+  }
 }
+
+/* =================================
+   PROFILE
+================================= */
+
+async function ensureProfile(user){
+  const {data,error}=await db
+    .from("profiles")
+    .select("*")
+    .eq("id",user.id)
+    .maybeSingle();
+
+  if(error)throw error;
+
+  if(data){
+    myProfile=data;
+    return;
+  }
+
+  const name=user.user_metadata.full_name||"T-WORLD User";
+  const username=
+    user.user_metadata.username||
+    "user_"+user.id.substring(0,8);
+
+  const {data:newProfile,error:insertError}=await db
+    .from("profiles")
+    .insert({
+      id:user.id,
+      full_name:name,
+      username:username
+    })
+    .select()
+    .single();
+
+  if(insertError)throw insertError;
+
+  myProfile=newProfile;
+}
+
+/* =================================
+   ENTER APP
+================================= */
+
+async function enterApp(user){
+  try{
+    currentUser=user;
+
+    await ensureProfile(user);
+
+    el("auth").classList.add("hidden");
+    el("app").classList.remove("hidden");
+    el("logoutBtn").classList.remove("hidden");
+
+    el("welcomeText").textContent=
+      "Welcome, "+myProfile.full_name;
+
+    await refreshHome();
+
+  }catch(error){
+    showMessage("Profile error: "+error.message,true);
+    el("auth").classList.remove("hidden");
+    el("app").classList.add("hidden");
+  }
+}
+
+/* =================================
+   SEARCH USERS
+================================= */
+
+async function searchUsers(){
+  clearTimeout(searchTimer);
+
+  searchTimer=setTimeout(async()=>{
+    try{
+      const term=el("searchInput").value.trim().toLowerCase();
+      const results=el("searchResults");
+
+      results.innerHTML="";
+
+      if(term.length<2)return;
+
+      const {data,error}=await db
+        .from("profiles")
+        .select("id,full_name,username")
+        .ilike("username","%"+term+"%")
+        .neq("id",currentUser.id)
+        .limit(20);
+
+      if(error)throw error;
+
+      if(!data.length){
+        results.textContent="No users found.";
+        return;
+      }
+
+      data.forEach(person=>{
+        const item=document.createElement("div");
+        item.className="person";
+
+        const name=document.createElement("strong");
+        name.textContent=person.full_name;
+
+        const username=document.createElement("small");
+        username.textContent="@"+person.username;
+
+        item.append(name,username);
+        item.onclick=()=>openChat(person);
+
+        results.appendChild(item);
+      });
+
+    }catch(error){
+      el("searchResults").textContent=error.message;
+    }
+  },350);
+}
+
+/* =================================
+   CONVERSATIONS
+================================= */
+
+async function refreshHome(){
+  try{
+    if(!currentUser)return;
+
+    const list=el("conversationList");
+    list.textContent="Loading conversations...";
+
+    const {data,error}=await db
+      .from("messages")
+      .select("sender_id,receiver_id,created_at")
+      .or(
+        "sender_id.eq."+currentUser.id+
+        ",receiver_id.eq."+currentUser.id
+      )
+      .order("created_at",{ascending:false})
+      .limit(100);
+
+    if(error)throw error;
+
+    const otherIds=[...new Set(
+      data.map(message=>
+        message.sender_id===currentUser.id
+          ? message.receiver_id
+          : message.sender_id
+      )
+    )];
+
+    list.innerHTML="";
+
+    if(!otherIds.length){
+      list.textContent="No conversations yet. Search for someone to chat with.";
+      return;
+    }
+
+    const {data:people,error:peopleError}=await db
+      .from("profiles")
+      .select("id,full_name,username")
+      .in("id",otherIds);
+
+    if(peopleError)throw peopleError;
+
+    people.forEach(person=>{
+      const item=document.createElement("div");
+      item.className="person";
+
+      const name=document.createElement("strong");
+      name.textContent=person.full_name;
+
+      const username=document.createElement("small");
+      username.textContent="@"+person.username;
+
+      item.append(name,username);
+      item.onclick=()=>openChat(person);
+
+      list.appendChild(item);
+    });
+
+  }catch(error){
+    el("conversationList").textContent=error.message;
+  }
+}
+
+/* =================================
+   OPEN CHAT
+================================= */
+
+async function openChat(person){
+  try{
+    activeChatUser=person;
+
+    closeRealtime();
+
+    el("homeScreen").classList.add("hidden");
+    el("chatScreen").classList.remove("hidden");
+
+    el("chatName").textContent=
+      person.full_name+" (@"+person.username+")";
+
+    showChatMessage("Loading messages...");
+
+    await loadMessages();
+    subscribeToMessages();
+
+  }catch(error){
+    showChatMessage(error.message,true);
+  }
+}
+
+/* =================================
+   LOAD MESSAGES
+================================= */
 
 async function loadMessages(){
-if(!friend)return;
-let box=document.getElementById("chatbox");
-box.textContent="Loading...";
-let r=await db.from("messages").select("*")
-.or("and(sender_id.eq."+me.id+",receiver_id.eq."+friend.id+"),and(sender_id.eq."+friend.id+",receiver_id.eq."+me.id+")")
-.order("created_at",{ascending:true});
-if(r.error){box.textContent=r.error.message;return;}
-box.innerHTML="";
-if(!r.data.length){box.textContent="No messages yet. Say hello!";return;}
-r.data.forEach(m=>{
-let d=document.createElement("div");
-d.className="message"+(m.sender_id===me.id?" mine":"");
-d.textContent=m.content;
-box.appendChild(d);
-});
-box.scrollTop=box.scrollHeight;
+  if(!activeChatUser)return;
+
+  const otherId=activeChatUser.id;
+
+  const {data,error}=await db
+    .from("messages")
+    .select("*")
+    .or(
+      "and(sender_id.eq."+currentUser.id+
+      ",receiver_id.eq."+otherId+"),"+
+      "and(sender_id.eq."+otherId+
+      ",receiver_id.eq."+currentUser.id+")"
+    )
+    .order("created_at",{ascending:true});
+
+  if(error)throw error;
+
+  const box=el("messages");
+  box.innerHTML="";
+
+  data.forEach(message=>{
+    const bubble=document.createElement("div");
+
+    bubble.className=
+      message.sender_id===currentUser.id
+        ?"bubble mine"
+        :"bubble";
+
+    const content=document.createElement("div");
+    content.textContent=message.content;
+
+    const time=document.createElement("small");
+    time.textContent=new Date(
+      message.created_at
+    ).toLocaleString();
+
+    bubble.append(content,time);
+    box.appendChild(bubble);
+  });
+
+  box.scrollTop=box.scrollHeight;
+  showChatMessage("");
 }
+
+/* =================================
+   SEND MESSAGE
+================================= */
 
 async function sendMessage(){
-let input=document.getElementById("message");
-let content=input.value.trim();
-let s=document.getElementById("chatStatus");
-if(!friend){s.textContent="Choose someone first.";return;}
-if(!content)return;
-let r=await db.from("messages").insert({
-sender_id:me.id,receiver_id:friend.id,content
-});
-if(r.error){s.textContent=r.error.message;return;}
-input.value="";
-s.textContent="";
-await loadMessages();
+  try{
+    const content=el("messageInput").value.trim();
+
+    if(!content||!activeChatUser)return;
+
+    if(content.length>4000){
+      return showChatMessage("Message is too long.",true);
+    }
+
+    el("messageInput").value="";
+    showChatMessage("Sending...");
+
+    const {error}=await db.from("messages").insert({
+      sender_id:currentUser.id,
+      receiver_id:activeChatUser.id,
+      content:content
+    });
+
+    if(error)throw error;
+
+    showChatMessage("");
+    await loadMessages();
+
+  }catch(error){
+    showChatMessage(error.message,true);
+  }
 }
+
+/* =================================
+   REAL-TIME MESSAGES
+================================= */
+
+function subscribeToMessages(){
+  if(messageSubscription){
+    db.removeChannel(messageSubscription);
+  }
+
+  messageSubscription=db
+    .channel("t-world-"+currentUser.id+"-"+activeChatUser.id)
+    .on(
+      "postgres_changes",
+      {
+        event:"INSERT",
+        schema:"public",
+        table:"messages"
+      },
+      payload=>{
+        const message=payload.new;
+
+        if(
+          activeChatUser&&
+          (
+            (message.sender_id===currentUser.id&&
+             message.receiver_id===activeChatUser.id)||
+            (message.sender_id===activeChatUser.id&&
+             message.receiver_id===currentUser.id)
+          )
+        ){
+          loadMessages().catch(error=>{
+            showChatMessage(error.message,true);
+          });
+        }
+      }
+    )
+    .subscribe();
+}
+
+function closeRealtime(){
+  if(messageSubscription){
+    db.removeChannel(messageSubscription);
+    messageSubscription=null;
+  }
+}
+
+/* =================================
+   NAVIGATION
+================================= */
+
+function goHome(){
+  closeRealtime();
+
+  activeChatUser=null;
+
+  el("chatScreen").classList.add("hidden");
+  el("homeScreen").classList.remove("hidden");
+
+  refreshHome();
+}
+
+/* =================================
+   LOGOUT
+================================= */
 
 async function logout(){
-await db.auth.signOut();
-me=null;profile=null;friend=null;
-document.getElementById("app").style.display="none";
-document.getElementById("auth").style.display="block";
-say("Logged out.");
+  try{
+    closeRealtime();
+
+    const {error}=await db.auth.signOut();
+
+    if(error)throw error;
+
+    currentUser=null;
+    myProfile=null;
+    activeChatUser=null;
+
+    el("app").classList.add("hidden");
+    el("auth").classList.remove("hidden");
+    el("logoutBtn").classList.add("hidden");
+
+    showLogin();
+
+  }catch(error){
+    showMessage(error.message,true);
+  }
 }
 
-async function start(){
-let r=await db.auth.getSession();
-if(r.data.session){
-try{await enter(r.data.session.user);}catch(e){say(e.message);}
-}
-}
-start();
+/* =================================
+   START T-WORLD
+================================= */
+
+initialize();
+
 </script>
 </body>
 </html>
