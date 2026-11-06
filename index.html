@@ -19,11 +19,17 @@ button{background:#0284c7;color:white;font-weight:bold;cursor:pointer}
 .smallbtn{width:auto;padding:9px 13px;background:#475569}
 .hidden{display:none}
 #message,#appMessage{margin-top:10px;color:#fbbf24}
-.person{background:#263750;padding:13px;border-radius:8px;margin:8px 0;cursor:pointer}
+.person{background:#263750;padding:12px;border-radius:8px;margin:8px 0;display:flex;align-items:center;gap:12px;cursor:pointer}
+.person:hover{background:#334b6b}
+.person-info{flex:1;min-width:0}
 .person strong{display:block}
 .status{font-size:12px;color:#4ade80;margin-top:5px}
 .offline{color:#94a3b8}
-.unread{color:#38bdf8;font-weight:bold}
+.unread{color:#38bdf8;font-weight:bold;font-size:12px;margin-top:5px}
+.avatar{width:52px;height:52px;border-radius:50%;object-fit:cover;background:#475569;flex-shrink:0}
+.my-avatar{width:85px;height:85px;border-radius:50%;object-fit:cover;background:#475569;display:block;margin:8px auto}
+.chat-avatar{width:42px;height:42px;border-radius:50%;object-fit:cover;background:#475569}
+.profile-area{text-align:center}
 #chatBox{height:350px;overflow-y:auto;background:#101827;border-radius:8px;padding:12px;margin:12px 0}
 .msg{max-width:85%;padding:10px;border-radius:10px;margin:8px 0;overflow-wrap:anywhere}
 .sent{background:#075985;margin-left:auto}
@@ -33,6 +39,7 @@ button{background:#0284c7;color:white;font-weight:bold;cursor:pointer}
 .chatinput input{flex:1;min-width:0}
 .chatinput button{width:85px}
 #typing{font-size:12px;color:#38bdf8;min-height:18px}
+.muted{font-size:12px;color:#94a3b8}
 </style>
 </head>
 
@@ -63,8 +70,16 @@ button{background:#0284c7;color:white;font-weight:bold;cursor:pointer}
 
 <div id="appPanel" class="hidden">
 
-<div class="panel">
+<div class="panel profile-area">
+<h3>My Profile</h3>
+<img id="myAvatar" class="my-avatar" alt="My profile picture">
 <div id="myName">Welcome</div>
+
+<label for="avatarFile">Choose a profile picture</label>
+<input id="avatarFile" type="file" accept="image/*">
+<button onclick="uploadAvatar()">Upload profile picture</button>
+<div class="muted">Choose a picture from your phone gallery.</div>
+
 <button class="smallbtn" onclick="loadUsers()">Refresh people</button>
 <button class="smallbtn" onclick="logout()">Logout</button>
 </div>
@@ -75,9 +90,14 @@ button{background:#0284c7;color:white;font-weight:bold;cursor:pointer}
 </div>
 
 <div id="chatPanel" class="panel hidden">
+<div style="display:flex;align-items:center;gap:10px">
+<img id="chatAvatar" class="chat-avatar" alt="Profile picture">
 <div id="chatTitle">Chat</div>
+</div>
+
 <div id="typing"></div>
 <div id="chatBox"></div>
+
 <div class="chatinput">
 <input id="chatInput" placeholder="Write a message..." autocomplete="off">
 <button onclick="sendMessage()">Send</button>
@@ -94,7 +114,10 @@ button{background:#0284c7;color:white;font-weight:bold;cursor:pointer}
 const SUPABASE_URL = "https://szlsitwlvlcohcodhazu.supabase.co";
 const SUPABASE_KEY = "sb_publishable_4t9X38e8lhJuwTB3KpaEfg_jfYwLcPS";
 
-const db = window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const db = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
 
 /* APP VARIABLES */
 
@@ -104,10 +127,9 @@ let selectedUser = null;
 let messageChannel = null;
 let presenceChannel = null;
 let typingChannel = null;
-let typingTimer = null;
 let heartbeatTimer = null;
-let onlineUsers = new Set();
 let typingTimeout = null;
+let onlineUsers = new Set();
 
 function el(id){
   return document.getElementById(id);
@@ -120,6 +142,16 @@ function showMessage(message,error=false){
 
 function appMessage(message){
   el("appMessage").textContent = message;
+}
+
+/* PROFILE IMAGE DISPLAY */
+
+function setAvatar(element,url){
+  element.src = url || "";
+  element.onerror = function(){
+    this.removeAttribute("src");
+    this.style.background = "#475569";
+  };
 }
 
 /* REGISTER */
@@ -170,7 +202,7 @@ async function register(){
 
       await startApp();
     }else{
-      showMessage("Account created! Check your email to confirm your account, then log in.");
+      showMessage("Account created! Check your email to confirm, then log in.");
     }
 
   }catch(error){
@@ -222,7 +254,8 @@ async function startApp(){
 
   if(!data){
     const name = currentUser.user_metadata.full_name || "User";
-    const username = currentUser.user_metadata.username || currentUser.email.split("@")[0];
+    const username = currentUser.user_metadata.username ||
+      currentUser.email.split("@")[0];
 
     const {data:newProfile,error:insertError} = await db
       .from("profiles")
@@ -244,10 +277,93 @@ async function startApp(){
   el("myName").textContent =
     "Welcome, " + (myProfile.full_name || myProfile.username);
 
+  setAvatar(el("myAvatar"),myProfile.avatar_url);
+
   await loadUsers();
   startPresence();
   startMessageUpdates();
   startHeartbeat();
+}
+
+/* UPLOAD PROFILE PICTURE */
+
+async function uploadAvatar(){
+  try{
+    const file = el("avatarFile").files[0];
+
+    if(!file){
+      return appMessage("Choose a picture first.");
+    }
+
+    if(!file.type.startsWith("image/")){
+      return appMessage("Please choose an image file.");
+    }
+
+    if(file.size > 5 * 1024 * 1024){
+      return appMessage("Image must be smaller than 5 MB.");
+    }
+
+    appMessage("Uploading your picture...");
+
+    const extension = file.name.split(".").pop().toLowerCase();
+    const safeExtension = /^[a-z0-9]+$/.test(extension) ? extension : "jpg";
+    const filePath = currentUser.id + "/" + Date.now() + "." + safeExtension;
+
+    const {error:uploadError} = await db.storage
+      .from("avatars")
+      .upload(filePath,file,{
+        cacheControl:"3600",
+        upsert:true,
+        contentType:file.type
+      });
+
+    if(uploadError) throw uploadError;
+
+    const {data:urlData} = db.storage
+      .from("avatars")
+      .getPublicUrl(filePath);
+
+    const avatarUrl = urlData.publicUrl;
+
+    const {error:updateError} = await db
+      .from("profiles")
+      .update({avatar_url:avatarUrl})
+      .eq("id",currentUser.id);
+
+    if(updateError) throw updateError;
+
+    myProfile.avatar_url = avatarUrl;
+    setAvatar(el("myAvatar"),avatarUrl);
+
+    await loadUsers();
+
+    if(selectedUser){
+      await refreshSelectedUser();
+    }
+
+    el("avatarFile").value = "";
+    appMessage("Your profile picture has been updated!");
+
+  }catch(error){
+    appMessage("Picture upload failed: " + error.message);
+  }
+}
+
+/* REFRESH SELECTED USER */
+
+async function refreshSelectedUser(){
+  if(!selectedUser) return;
+
+  const {data,error} = await db
+    .from("profiles")
+    .select("id,full_name,username,avatar_url,last_seen")
+    .eq("id",selectedUser.id)
+    .single();
+
+  if(!error && data){
+    selectedUser = data;
+    setAvatar(el("chatAvatar"),data.avatar_url);
+  }
 }
 
 /* LOAD PEOPLE */
@@ -259,7 +375,7 @@ async function loadUsers(){
 
   const {data:profiles,error} = await db
     .from("profiles")
-    .select("id,full_name,username,last_seen")
+    .select("id,full_name,username,last_seen,avatar_url")
     .neq("id",currentUser.id)
     .order("username");
 
@@ -276,7 +392,7 @@ async function loadUsers(){
 
   const counts = {};
 
-  if(!unreadError){
+  if(!unreadError && unread){
     unread.forEach(message=>{
       counts[message.sender_id] =
         (counts[message.sender_id] || 0) + 1;
@@ -294,6 +410,14 @@ async function loadUsers(){
     const div = document.createElement("div");
     div.className = "person";
 
+    const avatar = document.createElement("img");
+    avatar.className = "avatar";
+    avatar.alt = "Profile picture";
+    setAvatar(avatar,person.avatar_url);
+
+    const info = document.createElement("div");
+    info.className = "person-info";
+
     const name = document.createElement("strong");
     name.textContent = person.full_name || person.username || "User";
 
@@ -302,7 +426,6 @@ async function loadUsers(){
 
     const status = document.createElement("div");
     const online = onlineUsers.has(person.id);
-
     status.className = online ? "status" : "status offline";
 
     if(online){
@@ -315,16 +438,19 @@ async function loadUsers(){
       }
     }
 
-    div.appendChild(name);
-    div.appendChild(username);
-    div.appendChild(status);
+    info.appendChild(name);
+    info.appendChild(username);
+    info.appendChild(status);
 
     if(counts[person.id]){
       const unreadLabel = document.createElement("div");
       unreadLabel.className = "unread";
       unreadLabel.textContent = counts[person.id] + " unread message(s)";
-      div.appendChild(unreadLabel);
+      info.appendChild(unreadLabel);
     }
+
+    div.appendChild(avatar);
+    div.appendChild(info);
 
     div.onclick = ()=>openChat(person);
     el("users").appendChild(div);
@@ -339,6 +465,8 @@ async function openChat(person){
   el("chatPanel").classList.remove("hidden");
   el("chatTitle").textContent =
     person.full_name || person.username || "Chat";
+
+  setAvatar(el("chatAvatar"),person.avatar_url);
 
   el("chatBox").textContent = "Loading messages...";
 
@@ -469,7 +597,6 @@ function startMessageUpdates(){
       },
       async payload=>{
         const msg = payload.new || payload.old;
-
         if(!msg) return;
 
         const involved =
@@ -533,7 +660,7 @@ function startPresence(){
     });
 }
 
-/* LAST SEEN HEARTBEAT */
+/* LAST SEEN */
 
 function startHeartbeat(){
   if(heartbeatTimer) clearInterval(heartbeatTimer);
@@ -548,7 +675,6 @@ function startHeartbeat(){
   };
 
   updateLastSeen();
-
   heartbeatTimer = setInterval(updateLastSeen,60000);
 }
 
@@ -570,6 +696,7 @@ function startTypingChannel(){
         el("typing").textContent =
           (selectedUser.full_name || selectedUser.username) +
           " is typing...";
+
         clearTimeout(typingTimeout);
 
         typingTimeout = setTimeout(()=>{
