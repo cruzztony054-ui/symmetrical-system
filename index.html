@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,21 +9,23 @@
 *{box-sizing:border-box}
 body{margin:0;background:#101827;color:white;font-family:Arial,sans-serif}
 header{background:#172338;padding:18px;text-align:center;font-size:25px;font-weight:bold;color:#38bdf8}
-.container{max-width:650px;margin:auto;padding:14px}
+.container{max-width:700px;margin:auto;padding:14px}
 .panel{background:#1b2940;padding:15px;border-radius:12px;margin:12px 0}
-input,button{padding:13px;border:0;border-radius:7px;font-size:15px;margin:6px 0}
+input,button{padding:12px;border:0;border-radius:7px;font-size:15px;margin:5px 0}
 input{background:#eef2f7;color:#111;width:100%}
 button{background:#0284c7;color:white;font-weight:bold;cursor:pointer}
-button:disabled{opacity:.5}
-.hidden{display:none}
+button:disabled{opacity:.5;cursor:not-allowed}
+.secondary{background:#475569}
+.danger{background:#b91c1c}
+.hidden{display:none!important}
 .small{font-size:12px;color:#94a3b8}
 .person{display:flex;align-items:center;gap:12px;background:#263750;padding:12px;border-radius:9px;margin:8px 0;cursor:pointer}
-.person-info{flex:1}
+.person-info{flex:1;min-width:0}
 .avatar{width:48px;height:48px;border-radius:50%;object-fit:cover;background:#475569}
 .my-avatar{width:85px;height:85px;border-radius:50%;object-fit:cover;background:#475569}
 .chat-head{display:flex;align-items:center;gap:10px}
 #chatBox{height:350px;overflow-y:auto;background:#101827;padding:10px;border-radius:9px;margin:12px 0}
-.msg{padding:10px;border-radius:10px;margin:8px 0;max-width:85%;overflow-wrap:anywhere}
+.msg{padding:10px;border-radius:10px;margin:8px 0;max-width:88%;overflow-wrap:anywhere}
 .sent{background:#075985;margin-left:auto}
 .received{background:#334155}
 .msgtime{font-size:10px;color:#cbd5e1;margin-top:5px}
@@ -35,17 +36,23 @@ button:disabled{opacity:.5}
 .voice-controls button{flex:1}
 audio{width:100%;max-width:250px;margin-top:7px}
 #typing{color:#38bdf8;font-size:12px;min-height:18px}
-#message,#appMessage{color:#fbbf24;margin:8px 0}
+#message,#appMessage{color:#fbbf24;margin:8px 0;overflow-wrap:anywhere}
 .online{color:#4ade80;font-size:12px}
 .offline{color:#94a3b8;font-size:12px}
+.msg-actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
+.msg-actions button,.reaction{width:auto;padding:5px 8px;margin:2px;font-size:12px;background:#475569}
+.reaction.active{background:#0f766e}
+.msg-image{display:block;max-width:230px;max-height:230px;border-radius:8px;margin-top:5px}
+.reply-preview{background:#0f172a;border-left:3px solid #38bdf8;padding:7px;margin:5px 0;border-radius:4px;font-size:12px;color:#cbd5e1}
+#replyBar{background:#0f172a;padding:9px;border-radius:7px;margin:8px 0;color:#cbd5e1}
+.search-row{display:flex;gap:6px;align-items:center}
+.search-row input{flex:1;min-width:0}
+.search-row button{width:auto}
 </style>
 </head>
 <body>
-
 <header>🌍 T-WORLD</header>
-
 <div class="container">
-
 <div id="authPanel" class="panel">
 <h2>Welcome to T-WORLD</h2>
 <h3>Login</h3>
@@ -63,17 +70,15 @@ audio{width:100%;max-width:250px;margin-top:7px}
 </div>
 
 <div id="appPanel" class="hidden">
-
 <div class="panel" style="text-align:center">
 <h3>My Profile</h3>
 <img id="myAvatar" class="my-avatar" alt="Profile picture">
 <div id="myName"></div>
 <input id="avatarFile" type="file" accept="image/*">
 <button onclick="uploadAvatar()">Upload profile picture</button>
-<button onclick="loadUsers()">Refresh people</button>
-<button onclick="logout()">Logout</button>
+<button class="secondary" onclick="loadUsers()">Refresh people</button>
+<button class="secondary" onclick="logout()">Logout</button>
 </div>
-
 <div class="panel">
 <h3>People</h3>
 <div id="users">Loading people...</div>
@@ -85,13 +90,24 @@ audio{width:100%;max-width:250px;margin-top:7px}
 <strong id="chatTitle">Chat</strong>
 </div>
 <div id="typing"></div>
+<div class="search-row">
+<input id="searchInput" placeholder="Search messages in this chat...">
+<button class="secondary" onclick="clearSearch()">Clear</button>
+</div>
+<div id="searchInfo" class="small"></div>
 <div id="chatBox"></div>
-
+<div id="replyBar" class="hidden">
+<span id="replyText"></span>
+<button class="secondary" onclick="cancelReply()">Cancel reply</button>
+</div>
 <div class="chatinput">
 <input id="chatInput" placeholder="Write a message..." autocomplete="off">
 <button onclick="sendMessage()">Send</button>
 </div>
-
+<div style="margin-top:8px">
+<input id="imageFile" type="file" accept="image/*">
+<button onclick="sendImage()">Send picture</button>
+</div>
 <hr>
 <h3>🎙️ Voice messages</h3>
 <div class="voice-controls">
@@ -100,7 +116,6 @@ audio{width:100%;max-width:250px;margin-top:7px}
 </div>
 <div id="recordStatus" class="small">Tap Record to start.</div>
 </div>
-
 <div id="appMessage"></div>
 </div>
 </div>
@@ -110,47 +125,31 @@ const SUPABASE_URL="https://szlsitwlvlcohcodhazu.supabase.co";
 const SUPABASE_KEY="sb_publishable_4t9X38e8lhJuwTB3KpaEfg_jfYwLcPS";
 const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
-let currentUser=null;
-let myProfile=null;
-let selectedUser=null;
-let mediaRecorder=null;
-let audioChunks=[];
-let recordingStream=null;
-let presenceChannel=null;
-let messageChannel=null;
-let typingChannel=null;
-let onlineUsers=new Set();
-let typingTimer=null;
-let heartbeat=null;
+let currentUser=null,myProfile=null,selectedUser=null;
+let mediaRecorder=null,audioChunks=[],recordingStream=null;
+let presenceChannel=null,messageChannel=null,typingChannel=null;
+let onlineUsers=new Set(),typingTimer=null,heartbeat=null;
+let replyingTo=null,allMessages=[],messageReactions={};
+const EMOJIS=["👍","❤️","😂","😮","😢","🔥"];
 
 function el(id){return document.getElementById(id)}
 function say(message){el("appMessage").textContent=message}
 function authMessage(message){el("message").textContent=message}
-function avatar(element,url){
- element.src=url||"";
- element.onerror=()=>element.removeAttribute("src");
+function avatar(element,url){element.src=url||"";element.onerror=()=>element.removeAttribute("src")}
+function conversationFilter(){
+ return "and(sender_id.eq."+currentUser.id+",receiver_id.eq."+selectedUser.id+"),and(sender_id.eq."+selectedUser.id+",receiver_id.eq."+currentUser.id+")";
 }
 
 async function register(){
  try{
-  const full_name=el("fullName").value.trim();
-  const username=el("username").value.trim().toLowerCase();
-  const email=el("signupEmail").value.trim();
-  const password=el("signupPassword").value;
-  if(!full_name||!username||!email||!password)
-   return authMessage("Complete all fields.");
+  const full_name=el("fullName").value.trim(),username=el("username").value.trim().toLowerCase();
+  const email=el("signupEmail").value.trim(),password=el("signupPassword").value;
+  if(!full_name||!username||!email||!password)return authMessage("Complete all fields.");
   if(password.length<6)return authMessage("Password must be at least 6 characters.");
-
   authMessage("Creating account...");
-  const {data,error}=await db.auth.signUp({
-   email,password,options:{data:{full_name,username}}
-  });
+  const {data,error}=await db.auth.signUp({email,password,options:{data:{full_name,username}}});
   if(error)throw error;
-
-  if(!data.session){
-   authMessage("Account created. Check your email to confirm, then log in.");
-   return;
-  }
+  if(!data.session)return authMessage("Account created. Check your email to confirm, then log in.");
   currentUser=data.user;
   const {error:profileError}=await db.from("profiles").upsert({
    id:currentUser.id,full_name,username,last_seen:new Date().toISOString()
@@ -164,41 +163,28 @@ async function login(){
  try{
   authMessage("Logging in...");
   const {data,error}=await db.auth.signInWithPassword({
-   email:el("loginEmail").value.trim(),
-   password:el("loginPassword").value
+   email:el("loginEmail").value.trim(),password:el("loginPassword").value
   });
   if(error)throw error;
-  currentUser=data.user;
-  await startApp();
+  currentUser=data.user;await startApp();
  }catch(e){authMessage(e.message)}
 }
 
 async function startApp(){
- el("authPanel").classList.add("hidden");
- el("appPanel").classList.remove("hidden");
-
- const {data,error}=await db.from("profiles").select("*")
-  .eq("id",currentUser.id).maybeSingle();
+ el("authPanel").classList.add("hidden");el("appPanel").classList.remove("hidden");
+ const {data,error}=await db.from("profiles").select("*").eq("id",currentUser.id).maybeSingle();
  if(error)throw error;
-
  if(!data){
   const {data:newData,error:newError}=await db.from("profiles").insert({
-   id:currentUser.id,
-   full_name:currentUser.user_metadata.full_name||"User",
+   id:currentUser.id,full_name:currentUser.user_metadata.full_name||"User",
    username:currentUser.user_metadata.username||currentUser.email.split("@")[0],
    last_seen:new Date().toISOString()
   }).select().single();
-  if(newError)throw newError;
-  myProfile=newData;
+  if(newError)throw newError;myProfile=newData;
  }else myProfile=data;
-
  el("myName").textContent="Welcome, "+(myProfile.full_name||myProfile.username);
  avatar(el("myAvatar"),myProfile.avatar_url);
-
- await loadUsers();
- startPresence();
- startMessagesRealtime();
- startHeartbeat();
+ await loadUsers();startPresence();startMessagesRealtime();startHeartbeat();
 }
 
 async function uploadAvatar(){
@@ -207,25 +193,16 @@ async function uploadAvatar(){
   if(!file)return say("Choose a picture first.");
   if(!file.type.startsWith("image/"))return say("Choose an image.");
   if(file.size>5*1024*1024)return say("Image must be under 5 MB.");
-
   say("Uploading picture...");
   const ext=(file.name.split(".").pop()||"jpg").replace(/[^a-z0-9]/gi,"");
   const path=currentUser.id+"/"+Date.now()+"."+(ext||"jpg");
-
-  const {error:uploadError}=await db.storage.from("avatars").upload(path,file,{
-   contentType:file.type,upsert:false
-  });
+  const {error:uploadError}=await db.storage.from("avatars").upload(path,file,{contentType:file.type,upsert:false});
   if(uploadError)throw uploadError;
-
   const {data}=db.storage.from("avatars").getPublicUrl(path);
-  const {error:updateError}=await db.from("profiles")
-   .update({avatar_url:data.publicUrl}).eq("id",currentUser.id);
+  const {error:updateError}=await db.from("profiles").update({avatar_url:data.publicUrl}).eq("id",currentUser.id);
   if(updateError)throw updateError;
-
-  myProfile.avatar_url=data.publicUrl;
-  avatar(el("myAvatar"),data.publicUrl);
-  await loadUsers();
-  say("Profile picture updated!");
+  myProfile.avatar_url=data.publicUrl;avatar(el("myAvatar"),data.publicUrl);
+  await loadUsers();say("Profile picture updated!");
  }catch(e){say("Picture error: "+e.message)}
 }
 
@@ -233,214 +210,238 @@ async function loadUsers(){
  if(!currentUser)return;
  el("users").textContent="Loading...";
  const {data:people,error}=await db.from("profiles")
-  .select("id,full_name,username,last_seen,avatar_url")
-  .neq("id",currentUser.id).order("username");
+  .select("id,full_name,username,last_seen,avatar_url").neq("id",currentUser.id).order("username");
  if(error){el("users").textContent=error.message;return}
-
- const {data:unread}=await db.from("messages")
-  .select("sender_id").eq("receiver_id",currentUser.id).is("read_at",null);
- const counts={};
- (unread||[]).forEach(m=>counts[m.sender_id]=(counts[m.sender_id]||0)+1);
-
+ const {data:unread}=await db.from("messages").select("sender_id")
+  .eq("receiver_id",currentUser.id).is("read_at",null);
+ const counts={};(unread||[]).forEach(m=>counts[m.sender_id]=(counts[m.sender_id]||0)+1);
  el("users").innerHTML="";
- if(!people.length){el("users").textContent="No other users yet.";return}
-
+ if(!people||!people.length){el("users").textContent="No other users yet.";return}
  people.forEach(p=>{
-  const item=document.createElement("div");
-  item.className="person";
-  const img=document.createElement("img");
-  img.className="avatar";
-  img.alt="Profile picture";
-  avatar(img,p.avatar_url);
-  const info=document.createElement("div");
-  info.className="person-info";
-  const name=document.createElement("strong");
-  name.textContent=p.full_name||p.username;
-  const username=document.createElement("div");
-  username.textContent="@"+(p.username||"user");
-  const status=document.createElement("div");
-  status.className=onlineUsers.has(p.id)?"online":"offline";
-  status.textContent=onlineUsers.has(p.id)?"● Online":
-   "● Offline"+(p.last_seen?" · Last seen "+new Date(p.last_seen).toLocaleString():"");
+  const item=document.createElement("div");item.className="person";
+  const img=document.createElement("img");img.className="avatar";img.alt="Profile picture";avatar(img,p.avatar_url);
+  const info=document.createElement("div");info.className="person-info";
+  const name=document.createElement("strong");name.textContent=p.full_name||p.username;
+  const username=document.createElement("div");username.textContent="@"+(p.username||"user");
+  const status=document.createElement("div");status.className=onlineUsers.has(p.id)?"online":"offline";
+  status.textContent=onlineUsers.has(p.id)?"● Online":"● Offline"+(p.last_seen?" · Last seen "+new Date(p.last_seen).toLocaleString():"");
   info.append(name,username,status);
-  if(counts[p.id]){
-   const count=document.createElement("div");
-   count.className="online";
-   count.textContent=counts[p.id]+" unread message(s)";
-   info.appendChild(count);
-  }
-  item.append(img,info);
-  item.onclick=()=>openChat(p);
-  el("users").appendChild(item);
+  if(counts[p.id]){const count=document.createElement("div");count.className="online";count.textContent=counts[p.id]+" unread message(s)";info.appendChild(count)}
+  item.append(img,info);item.onclick=()=>openChat(p);el("users").appendChild(item);
  });
 }
 
 async function openChat(person){
- selectedUser=person;
- el("chatPanel").classList.remove("hidden");
- el("chatTitle").textContent=person.full_name||person.username;
- avatar(el("chatAvatar"),person.avatar_url);
- el("chatBox").textContent="Loading messages...";
- await loadMessages();
- await markMessagesRead();
- startTyping();
+ selectedUser=person;replyingTo=null;el("chatPanel").classList.remove("hidden");
+ el("chatTitle").textContent=person.full_name||person.username;avatar(el("chatAvatar"),person.avatar_url);
+ el("typing").textContent="";el("searchInput").value="";el("searchInfo").textContent="";
+ cancelReply();el("chatBox").textContent="Loading messages...";
+ await loadMessages();await markMessagesRead();startTyping();
 }
 
 async function loadMessages(){
  if(!selectedUser)return;
- const {data,error}=await db.from("messages").select("*")
-  .or("and(sender_id.eq."+currentUser.id+",receiver_id.eq."+selectedUser.id+
-   "),and(sender_id.eq."+selectedUser.id+",receiver_id.eq."+currentUser.id+")")
-  .order("created_at",{ascending:true});
+ const {data,error}=await db.from("messages").select("*").or(conversationFilter()).order("created_at",{ascending:true});
  if(error){el("chatBox").textContent=error.message;return}
-
- el("chatBox").innerHTML="";
- for(const m of data||[]){
-  const div=document.createElement("div");
-  div.className="msg "+(m.sender_id===currentUser.id?"sent":"received");
-
-  if(m.message_type==="audio"&&m.audio_url){
-   const label=document.createElement("div");
-   label.textContent="🎙️ Voice message";
-   div.appendChild(label);
-
-   const {data:urlData,error:urlError}=await db.storage
-    .from("voice-messages").createSignedUrl(m.audio_url,3600);
-   if(!urlError&&urlData){
-    const player=document.createElement("audio");
-    player.controls=true;
-    player.src=urlData.signedUrl;
-    div.appendChild(player);
-   }else{
-    const unavailable=document.createElement("div");
-    unavailable.textContent="Audio unavailable";
-    div.appendChild(unavailable);
-   }
-  }else{
-   const content=document.createElement("div");
-   content.textContent=m.content||"";
-   div.appendChild(content);
-  }
-
-  const time=document.createElement("div");
-  time.className="msgtime";
-  time.textContent=new Date(m.created_at).toLocaleString();
-  if(m.sender_id===currentUser.id&&m.read_at)time.textContent+=" · Seen";
-  div.appendChild(time);
-  el("chatBox").appendChild(div);
+ allMessages=data||[];
+ const ids=allMessages.map(m=>m.id);
+ messageReactions={};
+ if(ids.length){
+  const {data:reactions,error:reactionError}=await db.from("message_reactions")
+   .select("id,message_id,user_id,emoji").in("message_id",ids);
+  if(reactionError){console.log("Reaction load:",reactionError.message)}
+  else (reactions||[]).forEach(r=>{
+   if(!messageReactions[r.message_id])messageReactions[r.message_id]=[];
+   messageReactions[r.message_id].push(r);
+  });
  }
- el("chatBox").scrollTop=el("chatBox").scrollHeight;
+ renderMessages();
 }
 
-async function sendMessage(){
- const content=el("chatInput").value.trim();
- if(!content||!selectedUser)return;
- const {error}=await db.from("messages").insert({
-  sender_id:currentUser.id,
-  receiver_id:selectedUser.id,
-  content,
-  message_type:"text"
+function renderMessages(){
+ const box=el("chatBox"),query=el("searchInput").value.trim().toLowerCase();
+ box.innerHTML="";
+ const filtered=allMessages.filter(m=>{
+  if(!query)return true;
+  return (m.content||"").toLowerCase().includes(query)||
+   (m.message_type==="image"&&"picture image".includes(query))||
+   (m.message_type==="audio"&&"voice audio".includes(query));
  });
- if(error){say(error.message);return}
- el("chatInput").value="";
- await loadMessages();
- await loadUsers();
+ el("searchInfo").textContent=query?filtered.length+" matching message(s)": "";
+ const byId={};allMessages.forEach(m=>byId[m.id]=m);
+ filtered.forEach(m=>{
+  const mine=m.sender_id===currentUser.id,div=document.createElement("div");
+  div.className="msg "+(mine?"sent":"received");
+  if(m.reply_to&&byId[m.reply_to]){
+   const original=byId[m.reply_to],quote=document.createElement("div");quote.className="reply-preview";
+   quote.textContent="↪ "+(original.sender_id===currentUser.id?"You":"Reply to message")+": "+(original.content|| (original.message_type==="image"?"📷 Picture":"🎙️ Voice message"));
+   div.appendChild(quote);
+  }
+  if(m.message_type==="audio"&&m.audio_url){
+   const label=document.createElement("div");label.textContent="🎙️ Voice message";div.appendChild(label);
+   const player=document.createElement("audio");player.controls=true;player.preload="none";div.appendChild(player);
+   db.storage.from("voice-messages").createSignedUrl(m.audio_url,3600).then(({data,error})=>{
+    if(!error&&data)player.src=data.signedUrl;else player.replaceWith(document.createTextNode("Audio unavailable"));
+   });
+  }else if(m.message_type==="image"&&m.image_url){
+   const pic=document.createElement("img");pic.className="msg-image";pic.alt="Shared picture";pic.src="";
+   div.appendChild(pic);
+   db.storage.from("chat-images").createSignedUrl(m.image_url,3600).then(({data,error})=>{
+    if(!error&&data)pic.src=data.signedUrl;else pic.alt="Picture unavailable";
+   });
+  }else{
+   const content=document.createElement("div");content.textContent=m.content||"";div.appendChild(content);
+  }
+  const reactions=messageReactions[m.id]||[];
+  if(reactions.length){
+   const reactionRow=document.createElement("div");
+   EMOJIS.forEach(emoji=>{
+    const matching=reactions.filter(r=>r.emoji===emoji);
+    if(matching.length){
+     const b=document.createElement("button");b.className="reaction"+(matching.some(r=>r.user_id===currentUser.id)?" active":"");
+     b.textContent=emoji+" "+matching.length;b.onclick=()=>toggleReaction(m.id,emoji);reactionRow.appendChild(b);
+    }
+   });
+   div.appendChild(reactionRow);
+  }
+  const time=document.createElement("div");time.className="msgtime";
+  time.textContent=new Date(m.created_at).toLocaleString();
+  if(mine&&m.read_at)time.textContent+=" · Seen";
+  div.appendChild(time);
+  const actions=document.createElement("div");actions.className="msg-actions";
+  const reply=document.createElement("button");reply.textContent="↩ Reply";reply.onclick=()=>beginReply(m);actions.appendChild(reply);
+  EMOJIS.forEach(emoji=>{
+   const b=document.createElement("button");b.textContent=emoji;b.title="React "+emoji;
+   b.onclick=()=>toggleReaction(m.id,emoji);actions.appendChild(b);
+  });
+  if(mine){
+   const del=document.createElement("button");del.className="danger";del.textContent="Delete for everyone";
+   del.onclick=()=>deleteMessage(m);actions.appendChild(del);
+  }
+  div.appendChild(actions);box.appendChild(div);
+ });
+ box.scrollTop=box.scrollHeight;
+}
+
+function beginReply(message){
+ replyingTo=message;
+ const preview=message.content||(message.message_type==="image"?"📷 Picture":"🎙️ Voice message");
+ el("replyText").textContent="Replying to: "+preview.slice(0,120);
+ el("replyBar").classList.remove("hidden");el("chatInput").focus();
+}
+function cancelReply(){replyingTo=null;el("replyBar").classList.add("hidden");el("replyText").textContent=""}
+function clearSearch(){el("searchInput").value="";renderMessages()}
+el("searchInput").addEventListener("input",renderMessages);
+
+async function sendMessage(){
+ const content=el("chatInput").value.trim();if(!content||!selectedUser)return;
+ if(content.length>4000)return say("Message must be 4,000 characters or fewer.");
+ const row={sender_id:currentUser.id,receiver_id:selectedUser.id,content,message_type:"text"};
+ if(replyingTo)row.reply_to=replyingTo.id;
+ const {error}=await db.from("messages").insert(row);
+ if(error){say("Message error: "+error.message);return}
+ el("chatInput").value="";cancelReply();say("");await loadMessages();await loadUsers();
+}
+
+async function sendImage(){
+ try{
+  if(!selectedUser)return say("Open a chat first.");
+  const file=el("imageFile").files[0];if(!file)return say("Choose a picture first.");
+  if(!file.type.startsWith("image/"))return say("Choose an image file.");
+  if(file.size>8*1024*1024)return say("Picture must be under 8 MB.");
+  say("Uploading picture...");
+  const ext=(file.name.split(".").pop()||"jpg").replace(/[^a-z0-9]/gi,"")||"jpg";
+  const path=currentUser.id+"/"+selectedUser.id+"/"+Date.now()+"."+ext;
+  const {error:uploadError}=await db.storage.from("chat-images").upload(path,file,{contentType:file.type,upsert:false});
+  if(uploadError)throw uploadError;
+  const row={sender_id:currentUser.id,receiver_id:selectedUser.id,content:"",message_type:"image",image_url:path};
+  if(replyingTo)row.reply_to=replyingTo.id;
+  const {error}=await db.from("messages").insert(row);if(error)throw error;
+  el("imageFile").value="";cancelReply();say("Picture sent!");await loadMessages();await loadUsers();
+ }catch(e){say("Picture error: "+e.message)}
+}
+
+async function toggleReaction(messageId,emoji){
+ try{
+  const existing=(messageReactions[messageId]||[]).find(r=>r.user_id===currentUser.id&&r.emoji===emoji);
+  if(existing){
+   const {error}=await db.from("message_reactions").delete().eq("id",existing.id);
+   if(error)throw error;
+  }else{
+   const {error}=await db.from("message_reactions").insert({message_id:messageId,user_id:currentUser.id,emoji});
+   if(error)throw error;
+  }
+  await loadMessages();
+ }catch(e){say("Reaction error: "+e.message)}
+}
+
+async function deleteMessage(message){
+ if(!confirm("Delete this message for everyone in this chat?"))return;
+ try{
+  if(message.image_url)await db.storage.from("chat-images").remove([message.image_url]);
+  if(message.audio_url)await db.storage.from("voice-messages").remove([message.audio_url]);
+  const {error}=await db.from("messages").delete().eq("id",message.id).eq("sender_id",currentUser.id);
+  if(error)throw error;
+  say("Message deleted for everyone.");await loadMessages();await loadUsers();
+ }catch(e){say("Delete error: "+e.message)}
 }
 
 async function markMessagesRead(){
  if(!selectedUser)return;
- await db.from("messages").update({read_at:new Date().toISOString()})
-  .eq("sender_id",selectedUser.id)
-  .eq("receiver_id",currentUser.id)
-  .is("read_at",null);
- await loadMessages();
+ const {error}=await db.from("messages").update({read_at:new Date().toISOString()})
+  .eq("sender_id",selectedUser.id).eq("receiver_id",currentUser.id).is("read_at",null);
+ if(error)console.log("Read receipt:",error.message);
+ await loadMessages();await loadUsers();
 }
 
 async function startRecording(){
  try{
   if(!selectedUser)return say("Open a chat first.");
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)
-   return say("Microphone recording is not supported here. Open T-WORLD in Chrome.");
-
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)return say("Microphone recording is not supported here. Open T-WORLD in Chrome.");
   recordingStream=await navigator.mediaDevices.getUserMedia({audio:true});
-  let options={};
-  if(MediaRecorder.isTypeSupported("audio/webm;codecs=opus"))
-   options.mimeType="audio/webm;codecs=opus";
-
-  mediaRecorder=new MediaRecorder(recordingStream,options);
-  audioChunks=[];
-  mediaRecorder.ondataavailable=e=>{
-   if(e.data&&e.data.size>0)audioChunks.push(e.data);
-  };
-  mediaRecorder.onstop=uploadVoiceMessage;
-  mediaRecorder.start();
-
-  el("recordButton").disabled=true;
-  el("stopButton").disabled=false;
+  let options={};if(MediaRecorder.isTypeSupported("audio/webm;codecs=opus"))options.mimeType="audio/webm;codecs=opus";
+  mediaRecorder=new MediaRecorder(recordingStream,options);audioChunks=[];
+  mediaRecorder.ondataavailable=e=>{if(e.data&&e.data.size>0)audioChunks.push(e.data)};
+  mediaRecorder.onstop=uploadVoiceMessage;mediaRecorder.start();
+  el("recordButton").disabled=true;el("stopButton").disabled=false;
   el("recordStatus").textContent="Recording... tap Stop when finished.";
- }catch(e){
-  say("Microphone error: "+e.message);
- }
+ }catch(e){say("Microphone error: "+e.message)}
 }
-
 function stopRecording(){
  if(mediaRecorder&&mediaRecorder.state==="recording"){
-  mediaRecorder.stop();
-  if(recordingStream)recordingStream.getTracks().forEach(t=>t.stop());
-  el("stopButton").disabled=true;
-  el("recordStatus").textContent="Preparing your voice message...";
+  mediaRecorder.stop();if(recordingStream)recordingStream.getTracks().forEach(t=>t.stop());
+  el("stopButton").disabled=true;el("recordStatus").textContent="Preparing your voice message...";
  }
 }
-
 async function uploadVoiceMessage(){
  try{
-  const type=mediaRecorder.mimeType||"audio/webm";
-  const blob=new Blob(audioChunks,{type});
+  const type=mediaRecorder.mimeType||"audio/webm",blob=new Blob(audioChunks,{type});
   if(!blob.size)throw new Error("No audio was recorded.");
-
   const path=currentUser.id+"/"+selectedUser.id+"/"+Date.now()+".webm";
-  const {error:uploadError}=await db.storage
-   .from("voice-messages").upload(path,blob,{
-    contentType:type,upsert:false
-   });
+  const {error:uploadError}=await db.storage.from("voice-messages").upload(path,blob,{contentType:type,upsert:false});
   if(uploadError)throw uploadError;
-
-  const {error:insertError}=await db.from("messages").insert({
-   sender_id:currentUser.id,
-   receiver_id:selectedUser.id,
-   content:"",
-   audio_url:path,
-   message_type:"audio"
+  const {error}=await db.from("messages").insert({
+   sender_id:currentUser.id,receiver_id:selectedUser.id,content:"",audio_url:path,message_type:"audio"
   });
-  if(insertError)throw insertError;
-
-  el("recordStatus").textContent="Voice message sent!";
-  await loadMessages();
-  await loadUsers();
- }catch(e){
-  el("recordStatus").textContent="Voice message error: "+e.message;
- }finally{
-  el("recordButton").disabled=false;
-  el("stopButton").disabled=true;
-  if(recordingStream)recordingStream.getTracks().forEach(t=>t.stop());
-  recordingStream=null;
+  if(error)throw error;
+  el("recordStatus").textContent="Voice message sent!";await loadMessages();await loadUsers();
+ }catch(e){el("recordStatus").textContent="Voice message error: "+e.message}
+ finally{
+  el("recordButton").disabled=false;el("stopButton").disabled=true;
+  if(recordingStream)recordingStream.getTracks().forEach(t=>t.stop());recordingStream=null;
  }
 }
 
 function startMessagesRealtime(){
  if(messageChannel)db.removeChannel(messageChannel);
  messageChannel=db.channel("messages-"+currentUser.id)
-  .on("postgres_changes",{
-   event:"*",schema:"public",table:"messages"
-  },async payload=>{
-   const m=payload.new||payload.old;
-   if(!m)return;
+  .on("postgres_changes",{event:"*",schema:"public",table:"messages"},async payload=>{
+   const m=payload.new||payload.old;if(!m)return;
    if(m.sender_id===currentUser.id||m.receiver_id===currentUser.id){
     await loadUsers();
-    if(selectedUser&&
-     (m.sender_id===selectedUser.id||m.receiver_id===selectedUser.id)){
+    if(selectedUser&&(m.sender_id===selectedUser.id||m.receiver_id===selectedUser.id)){
      await loadMessages();
-     if(m.receiver_id===currentUser.id)await markMessagesRead();
+     if(payload.eventType!=="DELETE"&&m.receiver_id===currentUser.id)await markMessagesRead();
     }
    }
   }).subscribe();
@@ -450,68 +451,47 @@ function startPresence(){
  if(presenceChannel)db.removeChannel(presenceChannel);
  presenceChannel=db.channel("t-world-presence",{config:{presence:{key:currentUser.id}}});
  presenceChannel.on("presence",{event:"sync"},()=>{
-  const state=presenceChannel.presenceState();
-  onlineUsers=new Set(Object.keys(state));
-  loadUsers();
- }).subscribe(async status=>{
-  if(status==="SUBSCRIBED"){
-   await presenceChannel.track({online:true});
-  }
- });
+  const state=presenceChannel.presenceState();onlineUsers=new Set(Object.keys(state));loadUsers();
+ }).subscribe(async state=>{if(state==="SUBSCRIBED")await presenceChannel.track({online:true})});
 }
 
 function startTyping(){
  if(typingChannel)db.removeChannel(typingChannel);
- typingChannel=db.channel("typing-"+selectedUser.id+"-"+currentUser.id);
+ const pair=[currentUser.id,selectedUser.id].sort().join("-");
+ typingChannel=db.channel("typing-"+pair);
  typingChannel.on("broadcast",{event:"typing"},({payload})=>{
-  el("typing").textContent=payload.userId===selectedUser?.id?
-   payload.name+" is typing...":"";
+  el("typing").textContent=payload.userId===selectedUser?.id?payload.name+" is typing...":"";
  });
  typingChannel.subscribe();
 }
-
 el("chatInput").addEventListener("input",()=>{
  if(!selectedUser||!typingChannel)return;
- typingChannel.send({
-  type:"broadcast",event:"typing",
-  payload:{userId:currentUser.id,name:myProfile.full_name||"Someone"}
- });
- clearTimeout(typingTimer);
- typingTimer=setTimeout(()=>el("typing").textContent="",1800);
+ typingChannel.send({type:"broadcast",event:"typing",payload:{userId:currentUser.id,name:myProfile.full_name||"Someone"}});
+ clearTimeout(typingTimer);typingTimer=setTimeout(()=>el("typing").textContent="",1800);
 });
+el("chatInput").addEventListener("keydown",e=>{if(e.key==="Enter")sendMessage()});
 
 function startHeartbeat(){
  clearInterval(heartbeat);
- const update=()=>db.from("profiles")
-  .update({last_seen:new Date().toISOString()}).eq("id",currentUser.id);
- update();
- heartbeat=setInterval(update,60000);
+ const update=()=>db.from("profiles").update({last_seen:new Date().toISOString()}).eq("id",currentUser.id);
+ update();heartbeat=setInterval(update,60000);
 }
-
 async function logout(){
  if(mediaRecorder&&mediaRecorder.state==="recording")mediaRecorder.stop();
  if(recordingStream)recordingStream.getTracks().forEach(t=>t.stop());
- clearInterval(heartbeat);
+ clearInterval(heartbeat);clearTimeout(typingTimer);
  if(presenceChannel)await db.removeChannel(presenceChannel);
  if(messageChannel)await db.removeChannel(messageChannel);
  if(typingChannel)await db.removeChannel(typingChannel);
- await db.auth.signOut();
- currentUser=null;
- selectedUser=null;
- el("appPanel").classList.add("hidden");
- el("authPanel").classList.remove("hidden");
- el("chatPanel").classList.add("hidden");
- authMessage("You have logged out.");
+ await db.auth.signOut();currentUser=null;selectedUser=null;myProfile=null;
+ el("appPanel").classList.add("hidden");el("authPanel").classList.remove("hidden");
+ el("chatPanel").classList.add("hidden");el("chatBox").innerHTML="";
 }
-
 async function restoreSession(){
- const {data}=await db.auth.getSession();
- if(data.session){
-  currentUser=data.session.user;
-  try{await startApp()}catch(e){say("App error: "+e.message)}
- }
+ const {data,error}=await db.auth.getSession();
+ if(error){authMessage(error.message);return}
+ if(data.session){currentUser=data.session.user;try{await startApp()}catch(e){say("App error: "+e.message)}}
 }
-
 restoreSession();
 </script>
 </body>
