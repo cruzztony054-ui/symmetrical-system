@@ -6,82 +6,72 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>T-WORLD</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#101827;color:white;font-family:Arial,sans-serif}
-header{background:#172338;padding:18px;text-align:center;font-size:24px;font-weight:bold;color:#38bdf8}
-.container{max-width:650px;margin:auto;padding:15px}
-.panel{background:#1b2940;padding:17px;border-radius:12px;margin-top:15px}
-input,button{width:100%;padding:13px;margin:7px 0;border:0;border-radius:7px;font-size:15px}
-input{background:#eef2f7;color:#111}
+header{background:#172338;padding:18px;text-align:center;font-size:25px;font-weight:bold;color:#38bdf8}
+.container{max-width:650px;margin:auto;padding:14px}
+.panel{background:#1b2940;padding:15px;border-radius:12px;margin:12px 0}
+input,button{padding:13px;border:0;border-radius:7px;font-size:15px;margin:6px 0}
+input{background:#eef2f7;color:#111;width:100%}
 button{background:#0284c7;color:white;font-weight:bold;cursor:pointer}
-.smallbtn{width:auto;padding:9px 13px;background:#475569}
+button:disabled{opacity:.5}
 .hidden{display:none}
-#message,#appMessage{margin-top:10px;color:#fbbf24}
-.person{background:#263750;padding:12px;border-radius:8px;margin:8px 0;display:flex;align-items:center;gap:12px;cursor:pointer}
-.person:hover{background:#334b6b}
-.person-info{flex:1;min-width:0}
-.person strong{display:block}
-.status{font-size:12px;color:#4ade80;margin-top:5px}
-.offline{color:#94a3b8}
-.unread{color:#38bdf8;font-weight:bold;font-size:12px;margin-top:5px}
-.avatar{width:52px;height:52px;border-radius:50%;object-fit:cover;background:#475569;flex-shrink:0}
-.my-avatar{width:85px;height:85px;border-radius:50%;object-fit:cover;background:#475569;display:block;margin:8px auto}
-.chat-avatar{width:42px;height:42px;border-radius:50%;object-fit:cover;background:#475569}
-.profile-area{text-align:center}
-#chatBox{height:350px;overflow-y:auto;background:#101827;border-radius:8px;padding:12px;margin:12px 0}
-.msg{max-width:85%;padding:10px;border-radius:10px;margin:8px 0;overflow-wrap:anywhere}
+.small{font-size:12px;color:#94a3b8}
+.person{display:flex;align-items:center;gap:12px;background:#263750;padding:12px;border-radius:9px;margin:8px 0;cursor:pointer}
+.person-info{flex:1}
+.avatar{width:48px;height:48px;border-radius:50%;object-fit:cover;background:#475569}
+.my-avatar{width:85px;height:85px;border-radius:50%;object-fit:cover;background:#475569}
+.chat-head{display:flex;align-items:center;gap:10px}
+#chatBox{height:350px;overflow-y:auto;background:#101827;padding:10px;border-radius:9px;margin:12px 0}
+.msg{padding:10px;border-radius:10px;margin:8px 0;max-width:85%;overflow-wrap:anywhere}
 .sent{background:#075985;margin-left:auto}
 .received{background:#334155}
 .msgtime{font-size:10px;color:#cbd5e1;margin-top:5px}
-.chatinput{display:flex;gap:7px}
+.chatinput{display:flex;gap:6px}
 .chatinput input{flex:1;min-width:0}
 .chatinput button{width:85px}
-#typing{font-size:12px;color:#38bdf8;min-height:18px}
-.muted{font-size:12px;color:#94a3b8}
+.voice-controls{display:flex;gap:8px}
+.voice-controls button{flex:1}
+audio{width:100%;max-width:250px;margin-top:7px}
+#typing{color:#38bdf8;font-size:12px;min-height:18px}
+#message,#appMessage{color:#fbbf24;margin:8px 0}
+.online{color:#4ade80;font-size:12px}
+.offline{color:#94a3b8;font-size:12px}
 </style>
 </head>
-
 <body>
+
 <header>🌍 T-WORLD</header>
 
 <div class="container">
 
 <div id="authPanel" class="panel">
 <h2>Welcome to T-WORLD</h2>
-
 <h3>Login</h3>
 <input id="loginEmail" type="email" placeholder="Email address">
 <input id="loginPassword" type="password" placeholder="Password">
 <button onclick="login()">Login</button>
-
 <hr>
-
 <h3>Create account</h3>
 <input id="fullName" placeholder="Full name">
 <input id="username" placeholder="Username">
 <input id="signupEmail" type="email" placeholder="Email address">
 <input id="signupPassword" type="password" placeholder="Create password">
 <button onclick="register()">Create account</button>
-
 <div id="message"></div>
 </div>
 
 <div id="appPanel" class="hidden">
 
-<div class="panel profile-area">
+<div class="panel" style="text-align:center">
 <h3>My Profile</h3>
-<img id="myAvatar" class="my-avatar" alt="My profile picture">
-<div id="myName">Welcome</div>
-
-<label for="avatarFile">Choose a profile picture</label>
+<img id="myAvatar" class="my-avatar" alt="Profile picture">
+<div id="myName"></div>
 <input id="avatarFile" type="file" accept="image/*">
 <button onclick="uploadAvatar()">Upload profile picture</button>
-<div class="muted">Choose a picture from your phone gallery.</div>
-
-<button class="smallbtn" onclick="loadUsers()">Refresh people</button>
-<button class="smallbtn" onclick="logout()">Logout</button>
+<button onclick="loadUsers()">Refresh people</button>
+<button onclick="logout()">Logout</button>
 </div>
 
 <div class="panel">
@@ -90,11 +80,10 @@ button{background:#0284c7;color:white;font-weight:bold;cursor:pointer}
 </div>
 
 <div id="chatPanel" class="panel hidden">
-<div style="display:flex;align-items:center;gap:10px">
-<img id="chatAvatar" class="chat-avatar" alt="Profile picture">
-<div id="chatTitle">Chat</div>
+<div class="chat-head">
+<img id="chatAvatar" class="avatar" alt="Profile picture">
+<strong id="chatTitle">Chat</strong>
 </div>
-
 <div id="typing"></div>
 <div id="chatBox"></div>
 
@@ -102,6 +91,14 @@ button{background:#0284c7;color:white;font-weight:bold;cursor:pointer}
 <input id="chatInput" placeholder="Write a message..." autocomplete="off">
 <button onclick="sendMessage()">Send</button>
 </div>
+
+<hr>
+<h3>🎙️ Voice messages</h3>
+<div class="voice-controls">
+<button id="recordButton" onclick="startRecording()">🎙️ Record</button>
+<button id="stopButton" onclick="stopRecording()" disabled>⏹ Stop</button>
+</div>
+<div id="recordStatus" class="small">Tap Record to start.</div>
 </div>
 
 <div id="appMessage"></div>
@@ -109,661 +106,413 @@ button{background:#0284c7;color:white;font-weight:bold;cursor:pointer}
 </div>
 
 <script>
-/* SUPABASE CONNECTION */
+const SUPABASE_URL="https://szlsitwlvlcohcodhazu.supabase.co";
+const SUPABASE_KEY="sb_publishable_4t9X38e8lhJuwTB3KpaEfg_jfYwLcPS";
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
-const SUPABASE_URL = "https://szlsitwlvlcohcodhazu.supabase.co";
-const SUPABASE_KEY = "sb_publishable_4t9X38e8lhJuwTB3KpaEfg_jfYwLcPS";
+let currentUser=null;
+let myProfile=null;
+let selectedUser=null;
+let mediaRecorder=null;
+let audioChunks=[];
+let recordingStream=null;
+let presenceChannel=null;
+let messageChannel=null;
+let typingChannel=null;
+let onlineUsers=new Set();
+let typingTimer=null;
+let heartbeat=null;
 
-const db = window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_KEY
-);
-
-/* APP VARIABLES */
-
-let currentUser = null;
-let myProfile = null;
-let selectedUser = null;
-let messageChannel = null;
-let presenceChannel = null;
-let typingChannel = null;
-let heartbeatTimer = null;
-let typingTimeout = null;
-let onlineUsers = new Set();
-
-function el(id){
-  return document.getElementById(id);
+function el(id){return document.getElementById(id)}
+function say(message){el("appMessage").textContent=message}
+function authMessage(message){el("message").textContent=message}
+function avatar(element,url){
+ element.src=url||"";
+ element.onerror=()=>element.removeAttribute("src");
 }
-
-function showMessage(message,error=false){
-  el("message").textContent = message;
-  el("message").style.color = error ? "#f87171" : "#4ade80";
-}
-
-function appMessage(message){
-  el("appMessage").textContent = message;
-}
-
-/* PROFILE IMAGE DISPLAY */
-
-function setAvatar(element,url){
-  element.src = url || "";
-  element.onerror = function(){
-    this.removeAttribute("src");
-    this.style.background = "#475569";
-  };
-}
-
-/* REGISTER */
 
 async function register(){
-  try{
-    const fullName = el("fullName").value.trim();
-    const username = el("username").value.trim().toLowerCase();
-    const email = el("signupEmail").value.trim();
-    const password = el("signupPassword").value;
+ try{
+  const full_name=el("fullName").value.trim();
+  const username=el("username").value.trim().toLowerCase();
+  const email=el("signupEmail").value.trim();
+  const password=el("signupPassword").value;
+  if(!full_name||!username||!email||!password)
+   return authMessage("Complete all fields.");
+  if(password.length<6)return authMessage("Password must be at least 6 characters.");
 
-    if(!fullName || !username || !email || !password){
-      return showMessage("Please complete all fields.",true);
-    }
+  authMessage("Creating account...");
+  const {data,error}=await db.auth.signUp({
+   email,password,options:{data:{full_name,username}}
+  });
+  if(error)throw error;
 
-    if(password.length < 6){
-      return showMessage("Password must contain at least 6 characters.",true);
-    }
-
-    showMessage("Creating your account...");
-
-    const {data,error} = await db.auth.signUp({
-      email,
-      password,
-      options:{
-        data:{
-          full_name:fullName,
-          username:username
-        }
-      }
-    });
-
-    if(error) throw error;
-
-    if(data.user && data.session){
-      currentUser = data.user;
-
-      const {error:profileError} = await db
-        .from("profiles")
-        .upsert({
-          id:currentUser.id,
-          full_name:fullName,
-          username:username,
-          last_seen:new Date().toISOString()
-        });
-
-      if(profileError) throw profileError;
-
-      await startApp();
-    }else{
-      showMessage("Account created! Check your email to confirm, then log in.");
-    }
-
-  }catch(error){
-    showMessage(error.message,true);
+  if(!data.session){
+   authMessage("Account created. Check your email to confirm, then log in.");
+   return;
   }
+  currentUser=data.user;
+  const {error:profileError}=await db.from("profiles").upsert({
+   id:currentUser.id,full_name,username,last_seen:new Date().toISOString()
+  });
+  if(profileError)throw profileError;
+  await startApp();
+ }catch(e){authMessage(e.message)}
 }
-
-/* LOGIN */
 
 async function login(){
-  try{
-    const email = el("loginEmail").value.trim();
-    const password = el("loginPassword").value;
-
-    if(!email || !password){
-      return showMessage("Enter your email and password.",true);
-    }
-
-    showMessage("Logging in...");
-
-    const {data,error} = await db.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    if(error) throw error;
-
-    currentUser = data.user;
-    await startApp();
-
-  }catch(error){
-    showMessage(error.message,true);
-  }
+ try{
+  authMessage("Logging in...");
+  const {data,error}=await db.auth.signInWithPassword({
+   email:el("loginEmail").value.trim(),
+   password:el("loginPassword").value
+  });
+  if(error)throw error;
+  currentUser=data.user;
+  await startApp();
+ }catch(e){authMessage(e.message)}
 }
-
-/* START APP */
 
 async function startApp(){
-  el("authPanel").classList.add("hidden");
-  el("appPanel").classList.remove("hidden");
+ el("authPanel").classList.add("hidden");
+ el("appPanel").classList.remove("hidden");
 
-  const {data,error} = await db
-    .from("profiles")
-    .select("*")
-    .eq("id",currentUser.id)
-    .maybeSingle();
+ const {data,error}=await db.from("profiles").select("*")
+  .eq("id",currentUser.id).maybeSingle();
+ if(error)throw error;
 
-  if(error) throw error;
+ if(!data){
+  const {data:newData,error:newError}=await db.from("profiles").insert({
+   id:currentUser.id,
+   full_name:currentUser.user_metadata.full_name||"User",
+   username:currentUser.user_metadata.username||currentUser.email.split("@")[0],
+   last_seen:new Date().toISOString()
+  }).select().single();
+  if(newError)throw newError;
+  myProfile=newData;
+ }else myProfile=data;
 
-  if(!data){
-    const name = currentUser.user_metadata.full_name || "User";
-    const username = currentUser.user_metadata.username ||
-      currentUser.email.split("@")[0];
+ el("myName").textContent="Welcome, "+(myProfile.full_name||myProfile.username);
+ avatar(el("myAvatar"),myProfile.avatar_url);
 
-    const {data:newProfile,error:insertError} = await db
-      .from("profiles")
-      .insert({
-        id:currentUser.id,
-        full_name:name,
-        username:username,
-        last_seen:new Date().toISOString()
-      })
-      .select()
-      .single();
-
-    if(insertError) throw insertError;
-    myProfile = newProfile;
-  }else{
-    myProfile = data;
-  }
-
-  el("myName").textContent =
-    "Welcome, " + (myProfile.full_name || myProfile.username);
-
-  setAvatar(el("myAvatar"),myProfile.avatar_url);
-
-  await loadUsers();
-  startPresence();
-  startMessageUpdates();
-  startHeartbeat();
+ await loadUsers();
+ startPresence();
+ startMessagesRealtime();
+ startHeartbeat();
 }
-
-/* UPLOAD PROFILE PICTURE */
 
 async function uploadAvatar(){
-  try{
-    const file = el("avatarFile").files[0];
+ try{
+  const file=el("avatarFile").files[0];
+  if(!file)return say("Choose a picture first.");
+  if(!file.type.startsWith("image/"))return say("Choose an image.");
+  if(file.size>5*1024*1024)return say("Image must be under 5 MB.");
 
-    if(!file){
-      return appMessage("Choose a picture first.");
-    }
+  say("Uploading picture...");
+  const ext=(file.name.split(".").pop()||"jpg").replace(/[^a-z0-9]/gi,"");
+  const path=currentUser.id+"/"+Date.now()+"."+(ext||"jpg");
 
-    if(!file.type.startsWith("image/")){
-      return appMessage("Please choose an image file.");
-    }
+  const {error:uploadError}=await db.storage.from("avatars").upload(path,file,{
+   contentType:file.type,upsert:false
+  });
+  if(uploadError)throw uploadError;
 
-    if(file.size > 5 * 1024 * 1024){
-      return appMessage("Image must be smaller than 5 MB.");
-    }
+  const {data}=db.storage.from("avatars").getPublicUrl(path);
+  const {error:updateError}=await db.from("profiles")
+   .update({avatar_url:data.publicUrl}).eq("id",currentUser.id);
+  if(updateError)throw updateError;
 
-    appMessage("Uploading your picture...");
-
-    const extension = file.name.split(".").pop().toLowerCase();
-    const safeExtension = /^[a-z0-9]+$/.test(extension) ? extension : "jpg";
-    const filePath = currentUser.id + "/" + Date.now() + "." + safeExtension;
-
-    const {error:uploadError} = await db.storage
-      .from("avatars")
-      .upload(filePath,file,{
-        cacheControl:"3600",
-        upsert:true,
-        contentType:file.type
-      });
-
-    if(uploadError) throw uploadError;
-
-    const {data:urlData} = db.storage
-      .from("avatars")
-      .getPublicUrl(filePath);
-
-    const avatarUrl = urlData.publicUrl;
-
-    const {error:updateError} = await db
-      .from("profiles")
-      .update({avatar_url:avatarUrl})
-      .eq("id",currentUser.id);
-
-    if(updateError) throw updateError;
-
-    myProfile.avatar_url = avatarUrl;
-    setAvatar(el("myAvatar"),avatarUrl);
-
-    await loadUsers();
-
-    if(selectedUser){
-      await refreshSelectedUser();
-    }
-
-    el("avatarFile").value = "";
-    appMessage("Your profile picture has been updated!");
-
-  }catch(error){
-    appMessage("Picture upload failed: " + error.message);
-  }
+  myProfile.avatar_url=data.publicUrl;
+  avatar(el("myAvatar"),data.publicUrl);
+  await loadUsers();
+  say("Profile picture updated!");
+ }catch(e){say("Picture error: "+e.message)}
 }
-
-/* REFRESH SELECTED USER */
-
-async function refreshSelectedUser(){
-  if(!selectedUser) return;
-
-  const {data,error} = await db
-    .from("profiles")
-    .select("id,full_name,username,avatar_url,last_seen")
-    .eq("id",selectedUser.id)
-    .single();
-
-  if(!error && data){
-    selectedUser = data;
-    setAvatar(el("chatAvatar"),data.avatar_url);
-  }
-}
-
-/* LOAD PEOPLE */
 
 async function loadUsers(){
-  if(!currentUser) return;
+ if(!currentUser)return;
+ el("users").textContent="Loading...";
+ const {data:people,error}=await db.from("profiles")
+  .select("id,full_name,username,last_seen,avatar_url")
+  .neq("id",currentUser.id).order("username");
+ if(error){el("users").textContent=error.message;return}
 
-  el("users").textContent = "Loading people...";
+ const {data:unread}=await db.from("messages")
+  .select("sender_id").eq("receiver_id",currentUser.id).is("read_at",null);
+ const counts={};
+ (unread||[]).forEach(m=>counts[m.sender_id]=(counts[m.sender_id]||0)+1);
 
-  const {data:profiles,error} = await db
-    .from("profiles")
-    .select("id,full_name,username,last_seen,avatar_url")
-    .neq("id",currentUser.id)
-    .order("username");
+ el("users").innerHTML="";
+ if(!people.length){el("users").textContent="No other users yet.";return}
 
-  if(error){
-    el("users").textContent = error.message;
-    return;
+ people.forEach(p=>{
+  const item=document.createElement("div");
+  item.className="person";
+  const img=document.createElement("img");
+  img.className="avatar";
+  img.alt="Profile picture";
+  avatar(img,p.avatar_url);
+  const info=document.createElement("div");
+  info.className="person-info";
+  const name=document.createElement("strong");
+  name.textContent=p.full_name||p.username;
+  const username=document.createElement("div");
+  username.textContent="@"+(p.username||"user");
+  const status=document.createElement("div");
+  status.className=onlineUsers.has(p.id)?"online":"offline";
+  status.textContent=onlineUsers.has(p.id)?"● Online":
+   "● Offline"+(p.last_seen?" · Last seen "+new Date(p.last_seen).toLocaleString():"");
+  info.append(name,username,status);
+  if(counts[p.id]){
+   const count=document.createElement("div");
+   count.className="online";
+   count.textContent=counts[p.id]+" unread message(s)";
+   info.appendChild(count);
   }
-
-  const {data:unread,error:unreadError} = await db
-    .from("messages")
-    .select("sender_id")
-    .eq("receiver_id",currentUser.id)
-    .is("read_at",null);
-
-  const counts = {};
-
-  if(!unreadError && unread){
-    unread.forEach(message=>{
-      counts[message.sender_id] =
-        (counts[message.sender_id] || 0) + 1;
-    });
-  }
-
-  el("users").innerHTML = "";
-
-  if(!profiles.length){
-    el("users").textContent = "No other users yet.";
-    return;
-  }
-
-  profiles.forEach(person=>{
-    const div = document.createElement("div");
-    div.className = "person";
-
-    const avatar = document.createElement("img");
-    avatar.className = "avatar";
-    avatar.alt = "Profile picture";
-    setAvatar(avatar,person.avatar_url);
-
-    const info = document.createElement("div");
-    info.className = "person-info";
-
-    const name = document.createElement("strong");
-    name.textContent = person.full_name || person.username || "User";
-
-    const username = document.createElement("div");
-    username.textContent = "@" + (person.username || "user");
-
-    const status = document.createElement("div");
-    const online = onlineUsers.has(person.id);
-    status.className = online ? "status" : "status offline";
-
-    if(online){
-      status.textContent = "● Online";
-    }else{
-      status.textContent = "● Offline";
-      if(person.last_seen){
-        status.textContent += " · Last seen " +
-          new Date(person.last_seen).toLocaleString();
-      }
-    }
-
-    info.appendChild(name);
-    info.appendChild(username);
-    info.appendChild(status);
-
-    if(counts[person.id]){
-      const unreadLabel = document.createElement("div");
-      unreadLabel.className = "unread";
-      unreadLabel.textContent = counts[person.id] + " unread message(s)";
-      info.appendChild(unreadLabel);
-    }
-
-    div.appendChild(avatar);
-    div.appendChild(info);
-
-    div.onclick = ()=>openChat(person);
-    el("users").appendChild(div);
-  });
+  item.append(img,info);
+  item.onclick=()=>openChat(p);
+  el("users").appendChild(item);
+ });
 }
-
-/* OPEN CHAT */
 
 async function openChat(person){
-  selectedUser = person;
-
-  el("chatPanel").classList.remove("hidden");
-  el("chatTitle").textContent =
-    person.full_name || person.username || "Chat";
-
-  setAvatar(el("chatAvatar"),person.avatar_url);
-
-  el("chatBox").textContent = "Loading messages...";
-
-  await loadMessages();
-  await markMessagesRead();
-  startTypingChannel();
-
-  el("chatPanel").scrollIntoView({behavior:"smooth"});
+ selectedUser=person;
+ el("chatPanel").classList.remove("hidden");
+ el("chatTitle").textContent=person.full_name||person.username;
+ avatar(el("chatAvatar"),person.avatar_url);
+ el("chatBox").textContent="Loading messages...";
+ await loadMessages();
+ await markMessagesRead();
+ startTyping();
 }
-
-/* LOAD MESSAGES */
 
 async function loadMessages(){
-  if(!selectedUser || !currentUser) return;
+ if(!selectedUser)return;
+ const {data,error}=await db.from("messages").select("*")
+  .or("and(sender_id.eq."+currentUser.id+",receiver_id.eq."+selectedUser.id+
+   "),and(sender_id.eq."+selectedUser.id+",receiver_id.eq."+currentUser.id+")")
+  .order("created_at",{ascending:true});
+ if(error){el("chatBox").textContent=error.message;return}
 
-  const {data,error} = await db
-    .from("messages")
-    .select("*")
-    .or(
-      "and(sender_id.eq."+currentUser.id+
-      ",receiver_id.eq."+selectedUser.id+
-      "),and(sender_id.eq."+selectedUser.id+
-      ",receiver_id.eq."+currentUser.id+")"
-    )
-    .order("created_at",{ascending:true});
+ el("chatBox").innerHTML="";
+ for(const m of data||[]){
+  const div=document.createElement("div");
+  div.className="msg "+(m.sender_id===currentUser.id?"sent":"received");
 
-  if(error){
-    el("chatBox").textContent = error.message;
-    return;
+  if(m.message_type==="audio"&&m.audio_url){
+   const label=document.createElement("div");
+   label.textContent="🎙️ Voice message";
+   div.appendChild(label);
+
+   const {data:urlData,error:urlError}=await db.storage
+    .from("voice-messages").createSignedUrl(m.audio_url,3600);
+   if(!urlError&&urlData){
+    const player=document.createElement("audio");
+    player.controls=true;
+    player.src=urlData.signedUrl;
+    div.appendChild(player);
+   }else{
+    const unavailable=document.createElement("div");
+    unavailable.textContent="Audio unavailable";
+    div.appendChild(unavailable);
+   }
+  }else{
+   const content=document.createElement("div");
+   content.textContent=m.content||"";
+   div.appendChild(content);
   }
 
-  el("chatBox").innerHTML = "";
-
-  data.forEach(message=>{
-    const div = document.createElement("div");
-    div.className = "msg " +
-      (message.sender_id === currentUser.id ? "sent" : "received");
-
-    const content = document.createElement("div");
-    content.textContent = message.content;
-
-    const time = document.createElement("div");
-    time.className = "msgtime";
-    time.textContent = new Date(message.created_at).toLocaleString();
-
-    if(message.sender_id === currentUser.id && message.read_at){
-      time.textContent += " · Seen";
-    }
-
-    div.appendChild(content);
-    div.appendChild(time);
-    el("chatBox").appendChild(div);
-  });
-
-  el("chatBox").scrollTop = el("chatBox").scrollHeight;
+  const time=document.createElement("div");
+  time.className="msgtime";
+  time.textContent=new Date(m.created_at).toLocaleString();
+  if(m.sender_id===currentUser.id&&m.read_at)time.textContent+=" · Seen";
+  div.appendChild(time);
+  el("chatBox").appendChild(div);
+ }
+ el("chatBox").scrollTop=el("chatBox").scrollHeight;
 }
-
-/* SEND MESSAGE */
 
 async function sendMessage(){
-  try{
-    if(!selectedUser) return;
-
-    const content = el("chatInput").value.trim();
-    if(!content) return;
-
-    el("chatInput").value = "";
-
-    const {error} = await db
-      .from("messages")
-      .insert({
-        sender_id:currentUser.id,
-        receiver_id:selectedUser.id,
-        content:content
-      });
-
-    if(error) throw error;
-
-    await loadMessages();
-
-  }catch(error){
-    appMessage(error.message);
-  }
+ const content=el("chatInput").value.trim();
+ if(!content||!selectedUser)return;
+ const {error}=await db.from("messages").insert({
+  sender_id:currentUser.id,
+  receiver_id:selectedUser.id,
+  content,
+  message_type:"text"
+ });
+ if(error){say(error.message);return}
+ el("chatInput").value="";
+ await loadMessages();
+ await loadUsers();
 }
-
-/* ENTER TO SEND */
-
-el("chatInput").addEventListener("keydown",function(event){
-  if(event.key === "Enter"){
-    sendMessage();
-  }
-});
-
-/* MARK MESSAGES AS READ */
 
 async function markMessagesRead(){
-  if(!selectedUser || !currentUser) return;
+ if(!selectedUser)return;
+ await db.from("messages").update({read_at:new Date().toISOString()})
+  .eq("sender_id",selectedUser.id)
+  .eq("receiver_id",currentUser.id)
+  .is("read_at",null);
+ await loadMessages();
+}
 
-  const {error} = await db
-    .from("messages")
-    .update({read_at:new Date().toISOString()})
-    .eq("sender_id",selectedUser.id)
-    .eq("receiver_id",currentUser.id)
-    .is("read_at",null);
+async function startRecording(){
+ try{
+  if(!selectedUser)return say("Open a chat first.");
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia)
+   return say("Microphone recording is not supported here. Open T-WORLD in Chrome.");
 
-  if(error){
-    appMessage("Read status: " + error.message);
-  }
+  recordingStream=await navigator.mediaDevices.getUserMedia({audio:true});
+  let options={};
+  if(MediaRecorder.isTypeSupported("audio/webm;codecs=opus"))
+   options.mimeType="audio/webm;codecs=opus";
 
+  mediaRecorder=new MediaRecorder(recordingStream,options);
+  audioChunks=[];
+  mediaRecorder.ondataavailable=e=>{
+   if(e.data&&e.data.size>0)audioChunks.push(e.data);
+  };
+  mediaRecorder.onstop=uploadVoiceMessage;
+  mediaRecorder.start();
+
+  el("recordButton").disabled=true;
+  el("stopButton").disabled=false;
+  el("recordStatus").textContent="Recording... tap Stop when finished.";
+ }catch(e){
+  say("Microphone error: "+e.message);
+ }
+}
+
+function stopRecording(){
+ if(mediaRecorder&&mediaRecorder.state==="recording"){
+  mediaRecorder.stop();
+  if(recordingStream)recordingStream.getTracks().forEach(t=>t.stop());
+  el("stopButton").disabled=true;
+  el("recordStatus").textContent="Preparing your voice message...";
+ }
+}
+
+async function uploadVoiceMessage(){
+ try{
+  const type=mediaRecorder.mimeType||"audio/webm";
+  const blob=new Blob(audioChunks,{type});
+  if(!blob.size)throw new Error("No audio was recorded.");
+
+  const path=currentUser.id+"/"+selectedUser.id+"/"+Date.now()+".webm";
+  const {error:uploadError}=await db.storage
+   .from("voice-messages").upload(path,blob,{
+    contentType:type,upsert:false
+   });
+  if(uploadError)throw uploadError;
+
+  const {error:insertError}=await db.from("messages").insert({
+   sender_id:currentUser.id,
+   receiver_id:selectedUser.id,
+   content:"",
+   audio_url:path,
+   message_type:"audio"
+  });
+  if(insertError)throw insertError;
+
+  el("recordStatus").textContent="Voice message sent!";
+  await loadMessages();
   await loadUsers();
+ }catch(e){
+  el("recordStatus").textContent="Voice message error: "+e.message;
+ }finally{
+  el("recordButton").disabled=false;
+  el("stopButton").disabled=true;
+  if(recordingStream)recordingStream.getTracks().forEach(t=>t.stop());
+  recordingStream=null;
+ }
 }
 
-/* REALTIME MESSAGE UPDATES */
-
-function startMessageUpdates(){
-  if(messageChannel){
-    db.removeChannel(messageChannel);
-  }
-
-  messageChannel = db
-    .channel("t-world-messages-"+currentUser.id)
-    .on(
-      "postgres_changes",
-      {
-        event:"*",
-        schema:"public",
-        table:"messages"
-      },
-      async payload=>{
-        const msg = payload.new || payload.old;
-        if(!msg) return;
-
-        const involved =
-          msg.sender_id === currentUser.id ||
-          msg.receiver_id === currentUser.id;
-
-        if(!involved) return;
-
-        await loadUsers();
-
-        if(
-          selectedUser &&
-          (
-            msg.sender_id === selectedUser.id ||
-            msg.receiver_id === selectedUser.id
-          )
-        ){
-          await loadMessages();
-
-          if(msg.sender_id === selectedUser.id){
-            await markMessagesRead();
-          }
-        }
-      }
-    )
-    .subscribe();
+function startMessagesRealtime(){
+ if(messageChannel)db.removeChannel(messageChannel);
+ messageChannel=db.channel("messages-"+currentUser.id)
+  .on("postgres_changes",{
+   event:"*",schema:"public",table:"messages"
+  },async payload=>{
+   const m=payload.new||payload.old;
+   if(!m)return;
+   if(m.sender_id===currentUser.id||m.receiver_id===currentUser.id){
+    await loadUsers();
+    if(selectedUser&&
+     (m.sender_id===selectedUser.id||m.receiver_id===selectedUser.id)){
+     await loadMessages();
+     if(m.receiver_id===currentUser.id)await markMessagesRead();
+    }
+   }
+  }).subscribe();
 }
-
-/* ONLINE PRESENCE */
 
 function startPresence(){
-  if(presenceChannel){
-    db.removeChannel(presenceChannel);
+ if(presenceChannel)db.removeChannel(presenceChannel);
+ presenceChannel=db.channel("t-world-presence",{config:{presence:{key:currentUser.id}}});
+ presenceChannel.on("presence",{event:"sync"},()=>{
+  const state=presenceChannel.presenceState();
+  onlineUsers=new Set(Object.keys(state));
+  loadUsers();
+ }).subscribe(async status=>{
+  if(status==="SUBSCRIBED"){
+   await presenceChannel.track({online:true});
   }
-
-  presenceChannel = db.channel("t-world-online");
-
-  presenceChannel
-    .on("presence",{event:"sync"},()=>{
-      onlineUsers = new Set();
-
-      const state = presenceChannel.presenceState();
-
-      Object.keys(state).forEach(key=>{
-        state[key].forEach(user=>{
-          if(user.user_id){
-            onlineUsers.add(user.user_id);
-          }
-        });
-      });
-
-      loadUsers();
-    })
-    .subscribe(async status=>{
-      if(status === "SUBSCRIBED"){
-        await presenceChannel.track({
-          user_id:currentUser.id,
-          online_at:new Date().toISOString()
-        });
-      }
-    });
+ });
 }
 
-/* LAST SEEN */
-
-function startHeartbeat(){
-  if(heartbeatTimer) clearInterval(heartbeatTimer);
-
-  const updateLastSeen = async()=>{
-    if(!currentUser) return;
-
-    await db
-      .from("profiles")
-      .update({last_seen:new Date().toISOString()})
-      .eq("id",currentUser.id);
-  };
-
-  updateLastSeen();
-  heartbeatTimer = setInterval(updateLastSeen,60000);
+function startTyping(){
+ if(typingChannel)db.removeChannel(typingChannel);
+ typingChannel=db.channel("typing-"+selectedUser.id+"-"+currentUser.id);
+ typingChannel.on("broadcast",{event:"typing"},({payload})=>{
+  el("typing").textContent=payload.userId===selectedUser?.id?
+   payload.name+" is typing...":"";
+ });
+ typingChannel.subscribe();
 }
 
-/* TYPING INDICATOR */
-
-function startTypingChannel(){
-  if(typingChannel){
-    db.removeChannel(typingChannel);
-  }
-
-  const ids = [currentUser.id,selectedUser.id].sort();
-  const channelName = "typing-"+ids.join("-");
-
-  typingChannel = db.channel(channelName);
-
-  typingChannel
-    .on("broadcast",{event:"typing"},payload=>{
-      if(payload.payload.user_id !== currentUser.id){
-        el("typing").textContent =
-          (selectedUser.full_name || selectedUser.username) +
-          " is typing...";
-
-        clearTimeout(typingTimeout);
-
-        typingTimeout = setTimeout(()=>{
-          el("typing").textContent = "";
-        },2500);
-      }
-    })
-    .subscribe();
-}
-
-el("chatInput").addEventListener("input",async()=>{
-  if(!typingChannel || !currentUser) return;
-
-  await typingChannel.send({
-    type:"broadcast",
-    event:"typing",
-    payload:{user_id:currentUser.id}
-  });
+el("chatInput").addEventListener("input",()=>{
+ if(!selectedUser||!typingChannel)return;
+ typingChannel.send({
+  type:"broadcast",event:"typing",
+  payload:{userId:currentUser.id,name:myProfile.full_name||"Someone"}
+ });
+ clearTimeout(typingTimer);
+ typingTimer=setTimeout(()=>el("typing").textContent="",1800);
 });
 
-/* LOGOUT */
-
-async function logout(){
-  if(heartbeatTimer) clearInterval(heartbeatTimer);
-  if(typingTimeout) clearTimeout(typingTimeout);
-
-  if(messageChannel) await db.removeChannel(messageChannel);
-  if(presenceChannel) await db.removeChannel(presenceChannel);
-  if(typingChannel) await db.removeChannel(typingChannel);
-
-  await db.auth.signOut();
-
-  currentUser = null;
-  myProfile = null;
-  selectedUser = null;
-  onlineUsers.clear();
-
-  el("appPanel").classList.add("hidden");
-  el("authPanel").classList.remove("hidden");
-  el("chatPanel").classList.add("hidden");
-
-  showMessage("You have logged out.");
+function startHeartbeat(){
+ clearInterval(heartbeat);
+ const update=()=>db.from("profiles")
+  .update({last_seen:new Date().toISOString()}).eq("id",currentUser.id);
+ update();
+ heartbeat=setInterval(update,60000);
 }
 
-/* RESTORE SESSION */
+async function logout(){
+ if(mediaRecorder&&mediaRecorder.state==="recording")mediaRecorder.stop();
+ if(recordingStream)recordingStream.getTracks().forEach(t=>t.stop());
+ clearInterval(heartbeat);
+ if(presenceChannel)await db.removeChannel(presenceChannel);
+ if(messageChannel)await db.removeChannel(messageChannel);
+ if(typingChannel)await db.removeChannel(typingChannel);
+ await db.auth.signOut();
+ currentUser=null;
+ selectedUser=null;
+ el("appPanel").classList.add("hidden");
+ el("authPanel").classList.remove("hidden");
+ el("chatPanel").classList.add("hidden");
+ authMessage("You have logged out.");
+}
 
 async function restoreSession(){
-  const {data,error} = await db.auth.getSession();
-
-  if(error){
-    showMessage(error.message,true);
-    return;
-  }
-
-  if(data.session){
-    currentUser = data.session.user;
-
-    try{
-      await startApp();
-    }catch(error){
-      appMessage(error.message);
-    }
-  }
+ const {data}=await db.auth.getSession();
+ if(data.session){
+  currentUser=data.session.user;
+  try{await startApp()}catch(e){say("App error: "+e.message)}
+ }
 }
 
 restoreSession();
-
 </script>
 </body>
 </html>
