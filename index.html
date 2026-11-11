@@ -151,12 +151,33 @@ audio{width:100%;max-width:250px;margin-top:7px}
 </div>
 </div>
 </div>
+
 <div id="groupChatBox"></div>
+
+<div id="groupReplyBar" class="reply-preview hidden">
+  <span id="groupReplyText"></span>
+  <button class="secondary" onclick="cancelGroupReply()">Cancel</button>
+</div>
+
 <div class="chatinput">
-<input id="groupChatInput" placeholder="Message the group..." autocomplete="off">
-<button onclick="sendGroupMessage()">Send</button>
+  <input id="groupChatInput" placeholder="Message the group..." autocomplete="off">
+  <button onclick="sendGroupMessage()">Send</button>
 </div>
+
+<div style="margin-top:10px">
+  <input id="groupImageFile" type="file" accept="image/*">
+  <button onclick="sendGroupImage()">📸 Send group picture</button>
 </div>
+
+<hr>
+<h3>🎙️ Group voice messages</h3>
+<div class="voice-controls">
+  <button id="groupRecordButton" onclick="startGroupRecording()">🎙️ Record</button>
+  <button id="groupStopButton" onclick="stopGroupRecording()" disabled>⏹ Stop</button>
+</div>
+<div id="groupRecordStatus" class="small">Tap Record to start.</div>
+</div>
+
 
 <div id="appMessage"></div>
 </div>
@@ -172,7 +193,7 @@ let mediaRecorder=null,audioChunks=[],recordingStream=null;
 let presenceChannel=null,messageChannel=null,typingChannel=null,groupRealtimeChannel=null;
 let onlineUsers=new Set(),typingTimer=null,heartbeat=null;
 let replyingTo=null,allMessages=[],messageReactions={};
-
+let groupReplyingTo=null;
 const EMOJIS=["👍","❤️","😂","😮","😢","🔥"];
 
 function el(id){return document.getElementById(id)}
