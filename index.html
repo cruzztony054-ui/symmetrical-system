@@ -1294,14 +1294,22 @@ async function toggleGroupReaction(messageId,emoji){
  }
 }
 
+
 async function sendGroupImage(){
  try{
-  if(!selectedGroup)return say("Open a group first.");
+  if(!selectedGroup)
+   return say("Open a group first.");
 
-  const input=document.querySelector('#groupChatPanel input[type="file"]');
-const file=input?.files?.[0];
+  const input=el("groupImageFile");
 
-if(!file)return say("Please select a picture first.");
+  if(!input)
+   return say("ERROR: Group picture input not found.");
+
+  const file=input.files && input.files.length
+   ? input.files[0] : null;
+
+  if(!file)
+   return say("No picture selected. Choose a picture again.");
 
   if(!file.type.startsWith("image/"))
    return say("Choose an image file.");
@@ -1340,8 +1348,9 @@ if(!file)return say("Please select a picture first.");
   const {error}=await db.from("group_messages").insert(row);
   if(error)throw error;
 
-  el("groupImageFile").value="";
+  input.value="";
   cancelGroupReply();
+
   say("Group picture sent!");
   await loadGroupMessages();
 
@@ -1531,7 +1540,13 @@ async function logout(){
   say("Logout error: "+e.message);
  }
 }
+el("groupImageFile").addEventListener("change",()=>{
+ const file=el("groupImageFile").files[0];
 
+ say(file
+  ? "Picture selected: "+file.name
+  : "No picture selected.");
+});
 async function restoreSession(){
  try{
   const {data,error}=await db.auth.getSession();
