@@ -111,30 +111,7 @@ audio{width:100%;max-width:250px;margin-top:7px}
 </div>
 <div id="searchInfo" class="small"></div>
 <div id="chatBox"></div>
-  <div id="groupReplyBar" class="reply-preview hidden">
-  <span id="groupReplyText"></span>
-  <button class="secondary" onclick="cancelGroupReply()">Cancel</button>
-</div>
-
-<div class="chatinput">
-  <input id="groupChatInput" placeholder="Message the group..." autocomplete="off">
-  <button onclick="sendGroupMessage()">Send</button>
-</div>
-
-<div style="margin-top:8px">
-  <input id="groupImageFile" type="file" accept="image/*">
-  <button onclick="sendGroupImage()">📸 Send group picture</button>
-</div>
-
-<hr>
-<h3>🎙️ Group voice messages</h3>
-
-<div class="voice-controls">
-  <button id="groupRecordButton" onclick="startGroupRecording()">🎙️ Record</button>
-  <button id="groupStopButton" onclick="stopGroupRecording()" disabled>⏹ Stop</button>
-</div>
-
-<div id="groupRecordStatus" class="small">Tap Record to start.</div>
+  
 <div id="replyBar" class="hidden">
 <span id="replyText"></span>
 <button class="secondary" onclick="cancelReply()">Cancel reply</button>
@@ -1321,8 +1298,10 @@ async function sendGroupImage(){
  try{
   if(!selectedGroup)return say("Open a group first.");
 
-  const file=el("groupImageFile").files[0];
-  if(!file)return say("Choose a picture first.");
+  const input=document.querySelector('#groupChatPanel input[type="file"]');
+const file=input?.files?.[0];
+
+if(!file)return say("Please select a picture first.");
 
   if(!file.type.startsWith("image/"))
    return say("Choose an image file.");
