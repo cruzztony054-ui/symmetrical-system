@@ -906,6 +906,7 @@ async function createGroup(){
 
 async function openGroup(group){
  selectedGroup=group;
+ cancelGroupReply();
  selectedUser=null;
 
  if(typingChannel){
@@ -1035,28 +1036,57 @@ async function leaveGroup(){
  }
 }
 
+
+let groupMessageReactions={};
+let groupMediaRecorder=null;
+let groupAudioChunks=[];
+let groupRecordingStream=null;
+
 async function loadGroupMessages(){
  if(!selectedGroup)return;
 
  try{
+  const groupId=selectedGroup.id;
+
   const {data,error}=await db.from("group_messages")
-   .select("*").eq("group_id",selectedGroup.id)
+   .select("*").eq("group_id",groupId)
    .order("created_at",{ascending:true});
+
   if(error)throw error;
 
   const messages=data||[];
-  const ids=[...new Set(messages.map(m=>m.sender_id))];
-  let profiles=[];
+  const senderIds=[...new Set(messages.map(m=>m.sender_id))];
+  const messageIds=messages.map(m=>m.id);
 
-  if(ids.length){
+  let profiles=[];
+  if(senderIds.length){
    const {data:people,error:profileError}=await db.from("profiles")
-    .select("id,full_name,username").in("id",ids);
+    .select("id,full_name,username").in("id",senderIds);
    if(profileError)throw profileError;
    profiles=people||[];
   }
 
   const names={};
-  profiles.forEach(p=>names[p.id]=p.full_name||p.username||"Member");
+  profiles.forEach(p=>{
+   names[p.id]=p.full_name||p.username||"Member";
+  });
+
+  groupMessageReactions={};
+
+  if(messageIds.length){
+   const {data:reactions,error:reactionError}=await db
+    .from("group_message_reactions")
+    .select("id,message_id,user_id,emoji")
+    .in("message_id",messageIds);
+
+   if(reactionError)throw reactionError;
+
+   (reactions||[]).forEach(r=>{
+    if(!groupMessageReactions[r.message_id])
+     groupMessageReactions[r.message_id]=[];
+    groupMessageReactions[r.message_id].push(r);
+   });
+  }
 
   const box=el("groupChatBox");
   box.innerHTML="";
@@ -1066,30 +1096,143 @@ async function loadGroupMessages(){
    return;
   }
 
+  const byId={};
+  messages.forEach(m=>byId[m.id]=m);
+
   messages.forEach(m=>{
+   const mine=m.sender_id===currentUser.id;
    const div=document.createElement("div");
-   div.className="group-message"+(m.sender_id===currentUser.id?" mine":"");
+
+   div.className="group-message"+(mine?" mine":"");
 
    const sender=document.createElement("div");
    sender.className="group-sender";
-   sender.textContent=m.sender_id===currentUser.id
-    ?"You":(names[m.sender_id]||"Member");
+   sender.textContent=mine?"You":(names[m.sender_id]||"Member");
+   div.appendChild(sender);
 
-   const content=document.createElement("div");
-   content.textContent=m.content;
+   if(m.reply_to&&byId[m.reply_to]){
+    const original=byId[m.reply_to];
+    const quote=document.createElement("div");
+    quote.className="reply-preview";
+    quote.textContent="↪ "+(
+     original.sender_id===currentUser.id?"You":
+     (names[original.sender_id]||"Member")
+    )+": "+(
+     original.content||
+     (original.message_type==="image"?"📷 Picture":
+      original.message_type==="audio"?"🎙️ Voice message":"Message")
+    );
+    div.appendChild(quote);
+   }
+
+   if(m.message_type==="image"&&m.image_url){
+    const pic=document.createElement("img");
+    pic.className="msg-image";
+    pic.alt="Group picture";
+    div.appendChild(pic);
+
+    db.storage.from("group-images")
+     .createSignedUrl(m.image_url,3600)
+     .then(({data,error})=>{
+      if(!div.isConnected)return;
+      if(!error&&data)pic.src=data.signedUrl;
+      else pic.alt="Picture unavailable";
+     });
+
+   }else if(m.message_type==="audio"&&m.audio_url){
+    const label=document.createElement("div");
+    label.textContent="🎙️ Group voice message";
+    div.appendChild(label);
+
+    const player=document.createElement("audio");
+    player.controls=true;
+    player.preload="none";
+    div.appendChild(player);
+
+    db.storage.from("group-voice-messages")
+     .createSignedUrl(m.audio_url,3600)
+     .then(({data,error})=>{
+      if(!div.isConnected)return;
+      if(!error&&data)player.src=data.signedUrl;
+      else player.replaceWith(
+       document.createTextNode("Audio unavailable")
+      );
+     });
+
+   }else{
+    const content=document.createElement("div");
+    content.textContent=m.content||"";
+    div.appendChild(content);
+   }
+
+   const reactions=groupMessageReactions[m.id]||[];
+   const reactionRow=document.createElement("div");
+   reactionRow.className="msg-actions";
+
+   EMOJIS.forEach(emoji=>{
+    const matching=reactions.filter(r=>r.emoji===emoji);
+    if(matching.length){
+     const b=document.createElement("button");
+     b.className="reaction"+
+      (matching.some(r=>r.user_id===currentUser.id)?" active":"");
+     b.textContent=emoji+" "+matching.length;
+     b.onclick=()=>toggleGroupReaction(m.id,emoji);
+     reactionRow.appendChild(b);
+    }
+   });
+
+   if(reactionRow.children.length)div.appendChild(reactionRow);
 
    const time=document.createElement("div");
    time.className="msgtime";
    time.textContent=new Date(m.created_at).toLocaleString();
+   div.appendChild(time);
 
-   div.append(sender,content,time);
+   const actions=document.createElement("div");
+   actions.className="msg-actions";
+
+   const reply=document.createElement("button");
+   reply.textContent="↩ Reply";
+   reply.onclick=()=>beginGroupReply(m);
+   actions.appendChild(reply);
+
+   EMOJIS.forEach(emoji=>{
+    const b=document.createElement("button");
+    b.textContent=emoji;
+    b.onclick=()=>toggleGroupReaction(m.id,emoji);
+    actions.appendChild(b);
+   });
+
+   div.appendChild(actions);
    box.appendChild(div);
   });
 
   box.scrollTop=box.scrollHeight;
+
  }catch(e){
-  el("groupChatBox").textContent="Group messages error: "+e.message;
+  el("groupChatBox").textContent=
+   "Group messages error: "+e.message;
  }
+}
+
+function beginGroupReply(message){
+ groupReplyingTo=message;
+
+ const preview=message.content||
+  (message.message_type==="image"?"📷 Picture":
+   message.message_type==="audio"?"🎙️ Voice message":"Message");
+
+ el("groupReplyText").textContent=
+  "Replying to: "+preview.slice(0,120);
+
+ el("groupReplyBar").classList.remove("hidden");
+ el("groupChatInput").focus();
+}
+
+function cancelGroupReply(){
+ groupReplyingTo=null;
+ el("groupReplyBar").classList.add("hidden");
+ el("groupReplyText").textContent="";
 }
 
 async function sendGroupMessage(){
@@ -1098,20 +1241,220 @@ async function sendGroupMessage(){
 
   const content=el("groupChatInput").value.trim();
   if(!content)return;
+
   if(content.length>4000)
    return say("Message must be 4,000 characters or fewer.");
 
-  const {error}=await db.from("group_messages").insert({
+  const row={
    group_id:selectedGroup.id,
    sender_id:currentUser.id,
-   content
-  });
+   content,
+   message_type:"text"
+  };
+
+  if(groupReplyingTo)
+   row.reply_to=groupReplyingTo.id;
+
+  const {error}=await db.from("group_messages").insert(row);
   if(error)throw error;
 
   el("groupChatInput").value="";
+  cancelGroupReply();
   await loadGroupMessages();
+
  }catch(e){
-   say("Group message error: "+e.message);
+  say("Group message error: "+e.message);
+ }
+}
+
+async function toggleGroupReaction(messageId,emoji){
+ try{
+  const existing=(groupMessageReactions[messageId]||[])
+   .find(r=>r.user_id===currentUser.id&&r.emoji===emoji);
+
+  if(existing){
+   const {error}=await db.from("group_message_reactions")
+    .delete().eq("id",existing.id);
+   if(error)throw error;
+  }else{
+   const {error}=await db.from("group_message_reactions")
+    .insert({
+     message_id:messageId,
+     user_id:currentUser.id,
+     emoji
+    });
+   if(error)throw error;
+  }
+
+  await loadGroupMessages();
+
+ }catch(e){
+  say("Group reaction error: "+e.message);
+ }
+}
+
+async function sendGroupImage(){
+ try{
+  if(!selectedGroup)return say("Open a group first.");
+
+  const file=el("groupImageFile").files[0];
+  if(!file)return say("Choose a picture first.");
+
+  if(!file.type.startsWith("image/"))
+   return say("Choose an image file.");
+
+  if(file.size>8*1024*1024)
+   return say("Picture must be under 8 MB.");
+
+  say("Uploading group picture...");
+
+  const ext=(file.name.split(".").pop()||"jpg")
+   .replace(/[^a-z0-9]/gi,"")||"jpg";
+
+  const path=currentUser.id+"/"+selectedGroup.id+
+   "/"+Date.now()+"."+ext;
+
+  const {error:uploadError}=await db.storage
+   .from("group-images")
+   .upload(path,file,{
+    contentType:file.type,
+    upsert:false
+   });
+
+  if(uploadError)throw uploadError;
+
+  const row={
+   group_id:selectedGroup.id,
+   sender_id:currentUser.id,
+   content:"",
+   message_type:"image",
+   image_url:path
+  };
+
+  if(groupReplyingTo)
+   row.reply_to=groupReplyingTo.id;
+
+  const {error}=await db.from("group_messages").insert(row);
+  if(error)throw error;
+
+  el("groupImageFile").value="";
+  cancelGroupReply();
+  say("Group picture sent!");
+  await loadGroupMessages();
+
+ }catch(e){
+  say("Group picture error: "+e.message);
+ }
+}
+
+async function startGroupRecording(){
+ try{
+  if(!selectedGroup)return say("Open a group first.");
+
+  if(!navigator.mediaDevices||
+     !navigator.mediaDevices.getUserMedia||
+     !window.MediaRecorder)
+   return say("Recording is not supported. Open T-WORLD in Chrome.");
+
+  groupRecordingStream=
+   await navigator.mediaDevices.getUserMedia({audio:true});
+
+  let options={};
+
+  if(MediaRecorder.isTypeSupported("audio/webm;codecs=opus"))
+   options.mimeType="audio/webm;codecs=opus";
+
+  groupMediaRecorder=new MediaRecorder(
+   groupRecordingStream,options
+  );
+
+  groupAudioChunks=[];
+
+  groupMediaRecorder.ondataavailable=e=>{
+   if(e.data&&e.data.size>0)
+    groupAudioChunks.push(e.data);
+  };
+
+  groupMediaRecorder.onstop=uploadGroupVoice;
+
+  groupMediaRecorder.start();
+
+  el("groupRecordButton").disabled=true;
+  el("groupStopButton").disabled=false;
+  el("groupRecordStatus").textContent="Recording... tap Stop when finished.";
+
+ }catch(e){
+  say("Group microphone error: "+e.message);
+ }
+}
+
+function stopGroupRecording(){
+ if(groupMediaRecorder&&
+    groupMediaRecorder.state==="recording"){
+  groupMediaRecorder.stop();
+
+  if(groupRecordingStream)
+   groupRecordingStream.getTracks().forEach(t=>t.stop());
+
+  el("groupStopButton").disabled=true;
+  el("groupRecordStatus").textContent=
+   "Preparing your group voice message...";
+ }
+}
+
+async function uploadGroupVoice(){
+ try{
+  if(!selectedGroup)
+   throw new Error("No group is currently open.");
+
+  const type=groupMediaRecorder.mimeType||"audio/webm";
+  const blob=new Blob(groupAudioChunks,{type});
+
+  if(!blob.size)
+   throw new Error("No audio was recorded.");
+
+  const path=currentUser.id+"/"+selectedGroup.id+
+   "/"+Date.now()+".webm";
+
+  const {error:uploadError}=await db.storage
+   .from("group-voice-messages")
+   .upload(path,blob,{
+    contentType:type,
+    upsert:false
+   });
+
+  if(uploadError)throw uploadError;
+
+  const row={
+   group_id:selectedGroup.id,
+   sender_id:currentUser.id,
+   content:"",
+   message_type:"audio",
+   audio_url:path
+  };
+
+  if(groupReplyingTo)
+   row.reply_to=groupReplyingTo.id;
+
+  const {error}=await db.from("group_messages").insert(row);
+  if(error)throw error;
+
+  cancelGroupReply();
+  el("groupRecordStatus").textContent="Group voice message sent!";
+  await loadGroupMessages();
+
+ }catch(e){
+  el("groupRecordStatus").textContent=
+   "Voice message error: "+e.message;
+ }finally{
+  el("groupRecordButton").disabled=false;
+  el("groupStopButton").disabled=true;
+
+  if(groupRecordingStream)
+   groupRecordingStream.getTracks().forEach(t=>t.stop());
+
+  groupRecordingStream=null;
+  groupAudioChunks=[];
  }
 }
 
