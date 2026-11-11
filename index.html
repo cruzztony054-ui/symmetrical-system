@@ -1090,5 +1090,99 @@ async function sendGroupMessage(){
   el("groupChatInput").value="";
   await loadGroupMessages();
  }catch(e){
- 
+   say("Group message error: "+e.message);
+ }
+}
+
+function startGroupRealtime(){
+ if(groupRealtimeChannel){
+  db.removeChannel(groupRealtimeChannel);
+  groupRealtimeChannel=null;
+ }
+
+ groupRealtimeChannel=db.channel("group-messages-"+currentUser.id)
+  .on("postgres_changes",{
+   event:"*",
+   schema:"public",
+   table:"group_messages"
+  },async payload=>{
+   const m=payload.new||payload.old;
+
+   if(m&&selectedGroup&&m.group_id===selectedGroup.id){
+    await loadGroupMessages();
+   }
+  })
+  .subscribe();
+}
+
+el("groupChatInput").addEventListener("keydown",e=>{
+ if(e.key==="Enter"){
+  e.preventDefault();
+  sendGroupMessage();
+ }
+});
+
+async function logout(){
+ try{
+  if(!confirm("Are you sure you want to log out?"))return;
+
+  clearInterval(heartbeat);
+  clearTimeout(typingTimer);
+
+  if(recordingStream){
+   recordingStream.getTracks().forEach(track=>track.stop());
+   recordingStream=null;
+  }
+
+  const channels=[
+   presenceChannel,
+   messageChannel,
+   typingChannel,
+   groupRealtimeChannel
+  ];
+
+  for(const channel of channels){
+   if(channel)await db.removeChannel(channel);
+  }
+
+  await db.auth.signOut();
+
+  currentUser=null;
+  myProfile=null;
+  selectedUser=null;
+  selectedGroup=null;
+  onlineUsers=new Set();
+
+  el("appPanel").classList.add("hidden");
+  el("authPanel").classList.remove("hidden");
+  el("chatPanel").classList.add("hidden");
+  el("groupChatPanel").classList.add("hidden");
+
+  authMessage("You have logged out.");
+
+ }catch(e){
+  say("Logout error: "+e.message);
+ }
+}
+
+async function restoreSession(){
+ try{
+  const {data,error}=await db.auth.getSession();
+  if(error)throw error;
+
+  if(data.session){
+   currentUser=data.session.user;
+   await startApp();
+  }
+ }catch(e){
+  el("authPanel").classList.remove("hidden");
+  el("appPanel").classList.add("hidden");
+  authMessage("Session error: "+e.message);
+ }
+}
+
+restoreSession();
+</script>
+</body>
+</html>
   
